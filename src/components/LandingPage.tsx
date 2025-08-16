@@ -496,6 +496,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                   <div className="p-2 bg-gradient-to-r from-blue-500 to-green-500 rounded-lg mr-3 group-hover:scale-110 transition-transform duration-300">
                     <LineChart className="w-6 h-6 text-white" />
                   </div>
+                  </div>
                   Your Wealth Journey
                 </h3>
                 <div className="bg-gradient-to-r from-blue-100 to-green-100 px-3 py-1 rounded-full">
