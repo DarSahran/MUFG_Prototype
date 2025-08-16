@@ -135,13 +135,14 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  className={`w-full px-3 sm:px-4 py-2 sm:py-3 border rounded-lg text-sm sm:text-base ${
+                    storedName 
+                      ? 'border-slate-200 bg-slate-50 text-slate-600 cursor-not-allowed' 
+                      : 'border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                  }`}
                   placeholder="Enter your name"
                   readOnly={!!storedName}
                 />
-                {storedName && (
-                  <p className="text-xs text-green-600 mt-1">✓ Name imported from your account</p>
-                )}
               </div>
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-2">Current Age</label>
@@ -156,15 +157,16 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
                 <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-2">Planned Retirement Age</label>
                 <input
                   type="number"
-                  value={formData.retirementAge}
+                  value={formData.retirementAge || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, retirementAge: parseInt(e.target.value) }))}
                   className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  placeholder="Enter retirement age"
                 />
               </div>
             </div>
             
             {/* Years to Retirement Display */}
-            {formData.age && formData.retirementAge && (
+            {formData.age && formData.retirementAge && !isNaN(formData.retirementAge) && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
                 <div className="flex items-center justify-center space-x-2 mb-2">
                   <Target className="w-5 h-5 text-blue-600" />
