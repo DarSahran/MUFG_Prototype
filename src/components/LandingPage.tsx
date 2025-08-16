@@ -572,22 +572,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                       name="conservative"
                       strokeDasharray="5 5"
                     />
-                    <Line
-                      type="monotone"
                       dataKey="moderate"
                       stroke="#3B82F6"
                       strokeWidth={5}
                       dot={{ fill: '#3B82F6', strokeWidth: 3, r: 8 }}
                       name="moderate"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="aggressive"
-                      stroke="#10B981"
-                      strokeWidth={4}
-                      dot={{ fill: '#10B981', strokeWidth: 3, r: 6 }}
-                      name="aggressive"
-                    />
                   </RechartsLineChart>
                 </ResponsiveContainer>
               </div>
