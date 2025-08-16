@@ -366,21 +366,222 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </section>
 
       {/* Investment Projections Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-gradient-to-br from-white via-blue-50 to-green-50 relative overflow-hidden">
+        {/* Background Elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-10 w-32 h-32 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-float"></div>
+          <div className="absolute bottom-20 right-10 w-40 h-40 bg-green-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-float-delayed"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+        </div>
+        
         <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
-          <div className="text-center mb-12 lg:mb-16">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-4 animate-fade-in-up">
-              See Your Future Wealth Grow
+          <div className="text-center mb-16 lg:mb-20 relative">
+            <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-100 to-green-100 rounded-full text-sm font-medium text-blue-700 mb-6 animate-bounce">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Interactive Wealth Simulator
+            </div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-6 animate-fade-in-up">
+              Watch Your Money <span className="bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">Multiply</span>
             </h2>
-            <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto animate-fade-in-up animation-delay-300">
-              Visualize different investment strategies and their potential outcomes over time
+            <p className="text-xl sm:text-2xl text-slate-700 max-w-4xl mx-auto mb-8 animate-fade-in-up animation-delay-300 leading-relaxed">
+              See exactly how much <strong className="text-green-600">extra money</strong> you could have in retirement with smarter investment choices
             </p>
+            
+            {/* Key Stats Preview */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/50">
+                <div className="text-3xl font-bold text-green-600 mb-2">$847K</div>
+                <div className="text-sm text-slate-600">Extra with Smart Strategy</div>
+              </div>
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/50">
+                <div className="text-3xl font-bold text-blue-600 mb-2">15 Years</div>
+                <div className="text-sm text-slate-600">Earlier Retirement Possible</div>
+              </div>
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/50">
+                <div className="text-3xl font-bold text-purple-600 mb-2">$3,200</div>
+                <div className="text-sm text-slate-600">Extra Monthly Income</div>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-12 lg:mb-16">
+          {/* Interactive Strategy Comparison */}
+          <div className="mb-16 lg:mb-20">
+            <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 lg:p-12 border border-white/50">
+              <div className="text-center mb-12">
+                <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-4">
+                  💰 The Million Dollar Question
+                </h3>
+                <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+                  Which investment strategy will make you the most money? The difference might shock you.
+                </p>
+              </div>
+              
+              {/* Strategy Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <div className="group relative bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-6 border-2 border-red-200 hover:border-red-300 transition-all duration-300 cursor-pointer hover:scale-105">
+                  <div className="absolute top-4 right-4 text-2xl">😰</div>
+                  <h4 className="text-xl font-bold text-red-800 mb-2">Conservative</h4>
+                  <p className="text-red-700 text-sm mb-4">Playing it "safe" with low returns</p>
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold text-red-600">$400K</div>
+                    <div className="text-sm text-red-600">Final Balance</div>
+                    <div className="text-xs text-red-500">5.5% annual return</div>
+                  </div>
+                  <div className="mt-4 bg-red-200 rounded-full h-2">
+                    <div className="bg-red-500 h-2 rounded-full w-1/4"></div>
+                  </div>
+                </div>
+                
+                <div className="group relative bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 border-2 border-blue-300 hover:border-blue-400 transition-all duration-300 cursor-pointer hover:scale-105 ring-4 ring-blue-200">
+                  <div className="absolute top-4 right-4 text-2xl">🎯</div>
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">
+                    RECOMMENDED
+                  </div>
+                  <h4 className="text-xl font-bold text-blue-800 mb-2">Moderate</h4>
+                  <p className="text-blue-700 text-sm mb-4">Balanced approach for steady growth</p>
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold text-blue-600">$915K</div>
+                    <div className="text-sm text-blue-600">Final Balance</div>
+                    <div className="text-xs text-blue-500">7.5% annual return</div>
+                  </div>
+                  <div className="mt-4 bg-blue-200 rounded-full h-2">
+                    <div className="bg-blue-500 h-2 rounded-full w-3/4"></div>
+                  </div>
+                </div>
+                
+                <div className="group relative bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 border-2 border-green-200 hover:border-green-300 transition-all duration-300 cursor-pointer hover:scale-105">
+                  <div className="absolute top-4 right-4 text-2xl">🚀</div>
+                  <h4 className="text-xl font-bold text-green-800 mb-2">Aggressive</h4>
+                  <p className="text-green-700 text-sm mb-4">Maximum growth for long-term wealth</p>
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold text-green-600">$1.75M</div>
+                    <div className="text-sm text-green-600">Final Balance</div>
+                    <div className="text-xs text-green-500">9.5% annual return</div>
+                  </div>
+                  <div className="mt-4 bg-green-200 rounded-full h-2">
+                    <div className="bg-green-500 h-2 rounded-full w-full"></div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Shocking Comparison */}
+              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-8 border-2 border-yellow-200 mb-8">
+                <div className="text-center">
+                  <div className="text-4xl mb-4">🤯</div>
+                  <h4 className="text-2xl font-bold text-orange-800 mb-4">The Shocking Truth</h4>
+                  <p className="text-lg text-orange-700 mb-6">
+                    By choosing <strong>Aggressive over Conservative</strong>, you could have:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="bg-white rounded-xl p-6 shadow-lg">
+                      <div className="text-3xl font-bold text-green-600 mb-2">$1.35M MORE</div>
+                      <div className="text-sm text-slate-600">Extra money at retirement</div>
+                    </div>
+                    <div className="bg-white rounded-xl p-6 shadow-lg">
+                      <div className="text-3xl font-bold text-blue-600 mb-2">$4,500</div>
+                      <div className="text-sm text-slate-600">Extra monthly income</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Interactive Chart Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-16 lg:mb-20">
             {/* Growth Projection Chart */}
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-slate-200 hover:shadow-xl transition-all duration-300">
-              <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-4 sm:mb-6 flex items-center">
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-6 sm:p-8 border border-white/50 hover:shadow-3xl transition-all duration-500 group">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center group-hover:text-blue-600 transition-colors duration-300">
+                  <div className="p-2 bg-gradient-to-r from-blue-500 to-green-500 rounded-lg mr-3 group-hover:scale-110 transition-transform duration-300">
+                    <LineChart className="w-6 h-6 text-white" />
+                  </div>
+                  Your Wealth Journey
+                </h3>
+                <div className="bg-gradient-to-r from-blue-100 to-green-100 px-3 py-1 rounded-full">
+                  <span className="text-sm font-medium text-blue-700">30 Year Projection</span>
+                </div>
+              </div>
+              
+              <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-xl border border-blue-200">
+                <div className="flex items-center mb-2">
+                  <div className="text-2xl mr-2">💡</div>
+                  <span className="font-semibold text-blue-800">Pro Tip:</span>
+                </div>
+                <p className="text-sm text-blue-700">
+                  Starting with just <strong>$50,000</strong> and contributing <strong>$500/month</strong>, 
+                  see how different strategies can create vastly different outcomes!
+                </p>
+              </div>
+              
+              <div className="h-80 sm:h-96 relative">
+                <div className="absolute inset-0 bg-gradient-to-t from-white/50 to-transparent pointer-events-none z-10 rounded-lg"></div>
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsLineChart data={projectionData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis dataKey="year" stroke="#64748b" fontSize={12} />
+                    <YAxis 
+                      tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
+                      stroke="#64748b" 
+                      fontSize={12} 
+                    />
+                    <Tooltip
+                      formatter={(value: number, name: string) => [
+                        `$${value.toLocaleString()}`,
+                        name.charAt(0).toUpperCase() + name.slice(1)
+                      ]}
+                      labelFormatter={(label) => `Year: ${label}`}
+                      contentStyle={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="conservative"
+                      stroke="#EF4444"
+                      strokeWidth={4}
+                      dot={{ fill: '#EF4444', strokeWidth: 3, r: 6 }}
+                      name="conservative"
+                      strokeDasharray="5 5"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="moderate"
+                      stroke="#3B82F6"
+                      strokeWidth={5}
+                      dot={{ fill: '#3B82F6', strokeWidth: 3, r: 8 }}
+                      name="moderate"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="aggressive"
+                      stroke="#10B981"
+                      strokeWidth={4}
+                      dot={{ fill: '#10B981', strokeWidth: 3, r: 6 }}
+                      name="aggressive"
+                    />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
+              </div>
+              
+              <div className="flex flex-wrap justify-center gap-6 mt-6 text-sm">
+                <div className="flex items-center bg-red-50 px-3 py-2 rounded-full">
+                  <div className="w-4 h-1 bg-red-500 rounded-full mr-2" style={{clipPath: 'polygon(0 0, 80% 0, 100% 50%, 80% 100%, 0 100%)'}}></div>
+                  <span className="text-red-700 font-medium">Conservative (5.5%)</span>
+                </div>
+                <div className="flex items-center bg-blue-50 px-3 py-2 rounded-full ring-2 ring-blue-200">
+                  <div className="w-4 h-2 bg-blue-500 rounded-full mr-2"></div>
+                  <span className="text-blue-700 font-bold">Moderate (7.5%) ⭐</span>
+                </div>
+                <div className="flex items-center bg-green-50 px-3 py-2 rounded-full">
+                  <div className="w-4 h-1 bg-green-500 rounded-full mr-2"></div>
+                  <span className="text-green-700 font-medium">Aggressive (9.5%)</span>
+                </div>
+              </div>
+            </div>
                 <LineChart className="w-6 h-6 mr-3 text-blue-600" />
                 Investment Growth Projections
               </h3>
@@ -450,23 +651,43 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
               </div>
             </div>
 
-            {/* Portfolio Allocation Chart */}
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-slate-200 hover:shadow-xl transition-all duration-300">
-              <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-4 sm:mb-6 flex items-center">
-                <PieChart className="w-6 h-6 mr-3 text-green-600" />
-                Recommended Portfolio Mix
-              </h3>
-              <div className="h-64 sm:h-80">
+            {/* Smart Portfolio Breakdown */}
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-6 sm:p-8 border border-white/50 hover:shadow-3xl transition-all duration-500 group">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center group-hover:text-green-600 transition-colors duration-300">
+                  <div className="p-2 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg mr-3 group-hover:scale-110 transition-transform duration-300">
+                    <PieChart className="w-6 h-6 text-white" />
+                  </div>
+                  Smart Money Mix
+                </h3>
+                <div className="bg-gradient-to-r from-green-100 to-blue-100 px-3 py-1 rounded-full">
+                  <span className="text-sm font-medium text-green-700">AI Optimized</span>
+                </div>
+              </div>
+              
+              <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border border-green-200">
+                <div className="flex items-center mb-2">
+                  <div className="text-2xl mr-2">🧠</div>
+                  <span className="font-semibold text-green-800">AI Insight:</span>
+                </div>
+                <p className="text-sm text-green-700">
+                  This portfolio mix is designed to maximize your returns while managing risk. 
+                  <strong> 75% growth assets</strong> for wealth building, <strong>25% defensive</strong> for stability.
+                </p>
+              </div>
+              
+              <div className="h-80 sm:h-96 relative mb-6">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsPieChart>
                     <Pie
                       data={portfolioData}
                       cx="50%"
                       cy="50%"
-                      outerRadius={100}
+                      outerRadius={120}
+                      innerRadius={60}
                       fill="#8884d8"
                       dataKey="value"
-                      label={({ name, value }) => `${name}: ${value}%`}
+                      label={({ name, value }) => `${value}%`}
                       labelLine={false}
                     >
                       {portfolioData.map((entry, index) => (
@@ -476,26 +697,84 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                     <Tooltip
                       formatter={(value: number, name: string) => [`${value}%`, name]}
                       contentStyle={{
-                        backgroundColor: 'white',
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
                         border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
                       }}
                     />
                   </RechartsPieChart>
                 </ResponsiveContainer>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-xs sm:text-sm">
+                
+                {/* Center text */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-slate-900">Perfect</div>
+                    <div className="text-sm text-slate-600">Balance</div>
+                  </div>
+                </div>
+              </h3>
+              
+              {/* Asset Breakdown */}
+              <div className="space-y-4">
                 {portfolioData.map((item, index) => (
-                  <div key={index} className="flex items-center">
-                    <div 
-                      className="w-3 h-3 rounded-full mr-2" 
-                      style={{ backgroundColor: item.color }}
-                    ></div>
-                    <span>{item.name}</span>
+                  <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors duration-200 group cursor-pointer">
+                    <div className="flex items-center">
+                      <div 
+                        className="w-4 h-4 rounded-full mr-3 group-hover:scale-125 transition-transform duration-200" 
+                        style={{ backgroundColor: item.color }}
+                      ></div>
+                      <span className="font-medium text-slate-900 group-hover:text-slate-700">{item.name}</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-20 bg-slate-200 rounded-full h-2">
+                        <div 
+                          className="h-2 rounded-full transition-all duration-500 group-hover:h-3" 
+                          style={{ backgroundColor: item.color, width: `${item.value * 2.5}%` }}
+                        />
+                      </div>
+                      <span className="font-bold text-slate-900 w-8 text-right">{item.value}%</span>
+                    </div>
                   </div>
                 ))}
               </div>
+              
+              {/* Why This Works */}
+              <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                <div className="flex items-center mb-2">
+                  <div className="text-2xl mr-2">✨</div>
+                  <span className="font-semibold text-purple-800">Why This Works:</span>
+                </div>
+                <p className="text-sm text-purple-700">
+                  <strong>75% Growth Assets</strong> capture market upside over decades, while 
+                  <strong> 25% Defensive Assets</strong> provide stability during market downturns. 
+                  This balance has historically delivered strong long-term returns.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Call to Action */}
+          <div className="text-center">
+            <div className="bg-gradient-to-r from-blue-600 to-green-600 rounded-3xl p-8 lg:p-12 shadow-2xl">
+              <div className="text-4xl mb-6">🎯</div>
+              <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4">
+                Ready to Build Your Wealth Strategy?
+              </h3>
+              <p className="text-lg sm:text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+                Get your personalized investment plan in under 5 minutes. 
+                See exactly how much you could have at retirement.
+              </p>
+              <button
+                onClick={onGetStarted}
+                className="inline-flex items-center px-8 py-4 bg-white text-blue-600 rounded-xl hover:bg-slate-50 hover:scale-105 transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl"
+              >
+                <span>Start My Wealth Plan</span>
+                <ArrowRight className="w-6 h-6 ml-2" />
+              </button>
+              <p className="text-blue-200 text-sm mt-4">
+                Free analysis • No credit card required • Takes 5 minutes
+              </p>
             </div>
           </div>
         </div>
@@ -741,6 +1020,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </footer>
 
       <style jsx>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        @keyframes float-delayed {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-30px) rotate(-180deg); }
+        }
+        
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
+        
+        .animate-float-delayed {
+          animation: float-delayed 8s ease-in-out infinite;
+        }
+        
         @keyframes blob {
           0% { transform: translate(0px, 0px) scale(1); }
           33% { transform: translate(30px, -50px) scale(1.1); }
