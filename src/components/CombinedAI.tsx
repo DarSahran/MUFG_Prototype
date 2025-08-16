@@ -161,16 +161,16 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
     <div className="space-y-6">
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600"></div>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {recommendations.map((rec, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-lg p-6 border border-slate-200">
+              <div key={index} className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-slate-200 hover:shadow-xl transition-shadow duration-300">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="font-bold text-slate-900">{rec.symbol}</h3>
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900">{rec.symbol}</h3>
                     <p className="text-sm text-slate-600">{rec.name}</p>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -179,7 +179,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
                     </span>
                     <div className="flex items-center">
                       <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                      <span className="text-sm font-medium text-slate-600 ml-1">{rec.confidence}%</span>
+                      <span className="text-xs sm:text-sm font-medium text-slate-600 ml-1">{rec.confidence}%</span>
                     </div>
                   </div>
                 </div>
@@ -189,7 +189,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
                   {rec.recommendation === 'SELL' && <AlertCircle className="w-4 h-4 mr-1" />}
                   {rec.recommendation}
                 </div>
-                <p className="text-slate-700 text-sm mb-4">{rec.reasoning}</p>
+                <p className="text-slate-700 text-xs sm:text-sm mb-4">{rec.reasoning}</p>
                 <div className="space-y-2 text-sm">
                   {rec.targetPrice && (
                     <div className="flex justify-between">
@@ -198,8 +198,8 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Time Horizon:</span>
-                    <span className="font-medium text-slate-900">{rec.timeHorizon}</span>
+                    <span className="text-slate-600 text-xs sm:text-sm">Time Horizon:</span>
+                    <span className="font-medium text-slate-900 text-xs sm:text-sm">{rec.timeHorizon}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200">
@@ -211,7 +211,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
                       <ThumbsDown className="w-4 h-4" />
                     </button>
                   </div>
-                  <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                  <button className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium">
                     View Details
                   </button>
                 </div>
@@ -221,7 +221,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
           {recommendations.length === 0 && (
             <div className="text-center py-12">
               <Bot className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 mb-2">No recommendations available</h3>
+              <h3 className="text-base sm:text-lg font-medium text-slate-900 mb-2">No recommendations available</h3>
               <p className="text-slate-600">Try refreshing to get new AI-powered investment recommendations.</p>
             </div>
           )}
@@ -234,17 +234,17 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
     <div className="space-y-6">
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600"></div>
         </div>
       ) : (
         <>
           <div className="space-y-4">
             {insights.map((insight, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-lg p-6 border border-slate-200">
+              <div key={index} className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-slate-200 hover:shadow-xl transition-shadow duration-300">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="font-bold text-slate-900">{insight.title}</h3>
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900">{insight.title}</h3>
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                         insight.importance === 'HIGH' ? 'bg-red-100 text-red-700' :
                         insight.importance === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
@@ -261,7 +261,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
                         {insight.category.replace('_', ' ')}
                       </span>
                     </div>
-                    <p className="text-slate-700">{insight.content}</p>
+                    <p className="text-slate-700 text-sm sm:text-base">{insight.content}</p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-sm text-slate-500">
@@ -281,7 +281,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
           {insights.length === 0 && (
             <div className="text-center py-12">
               <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 mb-2">No insights available</h3>
+              <h3 className="text-base sm:text-lg font-medium text-slate-900 mb-2">No insights available</h3>
               <p className="text-slate-600">Market insights will appear here when available.</p>
             </div>
           )}
@@ -294,21 +294,21 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
     <div className="space-y-6">
       {/* Quick Actions */}
       {messages.length <= 1 && (
-        <div className="p-6 border-b border-slate-200">
-          <h3 className="text-sm font-medium text-slate-700 mb-3">Quick Actions</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="p-4 sm:p-6 border-b border-slate-200">
+          <h3 className="text-xs sm:text-sm font-medium text-slate-700 mb-3">Quick Actions</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
             {quickActions.map((action, index) => {
               const Icon = action.icon;
               return (
                 <button
                   key={index}
                   onClick={() => handleSendMessage(action.text)}
-                  className="flex flex-col items-center p-3 rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200"
+                  className="flex flex-col items-center p-2 sm:p-3 rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200"
                 >
-                  <div className={`p-2 rounded-lg ${action.color} mb-2`}>
+                  <div className={`p-1.5 sm:p-2 rounded-lg ${action.color} mb-2`}>
                     <Icon className="w-4 h-4 text-white" />
                   </div>
-                  <span className="text-xs text-slate-700 text-center">{action.text}</span>
+                  <span className="text-[10px] sm:text-xs text-slate-700 text-center leading-tight">{action.text}</span>
                 </button>
               );
             })}
@@ -316,38 +316,38 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
         </div>
       )}
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6" style={{ maxHeight: 400 }}>
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6" style={{ maxHeight: window.innerWidth < 640 ? 300 : 400 }}>
         {messages.map((message) => (
-          <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`flex max-w-3xl ${message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+          <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} max-w-full`}>
+            <div className={`flex max-w-full sm:max-w-3xl ${message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
               <div className={`flex-shrink-0 ${message.sender === 'user' ? 'ml-3' : 'mr-3'}`}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${
                   message.sender === 'user' 
                     ? 'bg-blue-600' 
                     : 'bg-gradient-to-br from-green-500 to-blue-600'
                 }`}>
                   {message.sender === 'user' ? (
-                    <User className="w-5 h-5 text-white" />
+                    <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   ) : (
-                    <Bot className="w-5 h-5 text-white" />
+                    <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   )}
                 </div>
               </div>
-              <div>
-                <div className={`p-4 rounded-lg ${
+              <div className="min-w-0 flex-1">
+                <div className={`p-3 sm:p-4 rounded-lg ${
                   message.sender === 'user'
                     ? 'bg-blue-600 text-white'
                     : 'bg-slate-100 text-slate-900'
                 }`}>
-                  <p className="whitespace-pre-line">{message.text}</p>
+                  <p className="whitespace-pre-line text-sm sm:text-base break-words">{message.text}</p>
                 </div>
                 {message.suggestions && (
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-2 sm:mt-3 flex flex-wrap gap-1 sm:gap-2">
                     {message.suggestions.map((suggestion, index) => (
                       <button
                         key={index}
                         onClick={() => handleSuggestionClick(suggestion)}
-                        className="px-3 py-1 text-xs bg-white border border-slate-300 text-slate-700 rounded-full hover:bg-slate-50 transition-colors duration-200"
+                        className="px-2 sm:px-3 py-1 text-[10px] sm:text-xs bg-white border border-slate-300 text-slate-700 rounded-full hover:bg-slate-50 transition-colors duration-200"
                       >
                         {suggestion}
                       </button>
@@ -361,12 +361,12 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
         {isTyping && (
           <div className="flex justify-start">
             <div className="flex">
-              <div className="mr-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-white" />
+              <div className="mr-2 sm:mr-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center">
+                  <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </div>
               </div>
-              <div className="bg-slate-100 p-4 rounded-lg">
+              <div className="bg-slate-100 p-3 sm:p-4 rounded-lg">
                 <div className="flex space-x-2">
                   <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
                   <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
@@ -379,25 +379,25 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
         <div ref={messagesEndRef} />
       </div>
       {/* Chat Input */}
-      <div className="border-t border-slate-200 p-6">
-        <div className="flex space-x-4">
+      <div className="border-t border-slate-200 p-4 sm:p-6">
+        <div className="flex space-x-2 sm:space-x-4">
           <input
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(inputText)}
             placeholder="Ask me about your superannuation strategy..."
-            className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
           />
           <button
             onClick={() => handleSendMessage(inputText)}
             disabled={!inputText.trim() || isTyping}
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg hover:from-blue-700 hover:to-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg hover:from-blue-700 hover:to-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send className="w-5 h-5" />
           </button>
         </div>
-        <p className="text-xs text-slate-500 mt-2 text-center">
+        <p className="text-[10px] sm:text-xs text-slate-500 mt-2 text-center">
           AI responses are educational and not personalized financial advice. Consult a licensed advisor for specific guidance.
         </p>
       </div>
@@ -406,29 +406,29 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
 
   // Main Render
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-8 px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6 xl:px-8">
+      <div className="max-w-7xl mx-auto w-full">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6 lg:mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">AI Investment Advisor</h1>
-              <p className="text-slate-600">Personalized recommendations powered by artificial intelligence</p>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">AI Investment Advisor</h1>
+              <p className="text-sm sm:text-base text-slate-600">Personalized recommendations powered by artificial intelligence</p>
             </div>
             <button
               onClick={loadAIData}
               disabled={loading}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm sm:text-base"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              <span>Refresh</span>
+              <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
         </div>
         {/* Navigation Tabs */}
-        <div className="bg-white rounded-xl shadow-lg mb-8">
+        <div className="bg-white rounded-xl shadow-lg mb-6 lg:mb-8">
           <div className="border-b border-slate-200">
-            <nav className="flex space-x-8 px-6">
+            <nav className="flex space-x-4 sm:space-x-6 lg:space-x-8 px-4 sm:px-6 overflow-x-auto">
               {[
                 { id: 'recommendations', label: 'Recommendations', icon: TrendingUp },
                 { id: 'insights', label: 'Market Insights', icon: AlertCircle },
@@ -439,7 +439,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
                   <button
                     key={tab.id}
                     onClick={() => setSelectedTab(tab.id as any)}
-                    className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                    className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                       selectedTab === tab.id
                         ? 'border-blue-500 text-blue-600'
                         : 'border-transparent text-slate-500 hover:text-slate-700'
@@ -452,7 +452,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
               })}
             </nav>
           </div>
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {selectedTab === 'recommendations' && renderRecommendations()}
             {selectedTab === 'insights' && renderInsights()}
             {selectedTab === 'chat' && renderChat()}
