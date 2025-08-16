@@ -582,76 +582,79 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 </div>
               </div>
             </div>
-                <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                <LineChart className="w-6 h-6 mr-3 text-blue-600" />
+                <div className="flex items-center mb-6">
+                  <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                    <LineChart className="w-6 h-6 mr-3 text-blue-600" />
+                  </div>
+                  <span className="font-bold text-slate-900 text-xl sm:text-2xl group-hover:text-blue-600 transition-colors duration-300">
+                    Investment Growth Projections
+                  </span>
                 </div>
-                Investment Growth Projections
-              </h3>
-              <div className="h-64 sm:h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsLineChart data={projectionData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                    <XAxis dataKey="year" stroke="#64748b" fontSize={10} />
-                    <YAxis 
-                      tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
-                      stroke="#64748b" 
-                      fontSize={10} 
-                    />
-                    <Tooltip
-                      formatter={(value: number, name: string) => [
-                        `$${value.toLocaleString()}`,
-                        name.charAt(0).toUpperCase() + name.slice(1)
-                      ]}
-                      labelFormatter={(label) => `Year: ${label}`}
-                      contentStyle={{
-                        backgroundColor: 'white',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="conservative"
-                      stroke="#10B981"
-                      strokeWidth={3}
-                      dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
-                      name="conservative"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="moderate"
-                      stroke="#3B82F6"
-                      strokeWidth={3}
-                      dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
-                      name="moderate"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="aggressive"
-                      stroke="#EF4444"
-                      strokeWidth={3}
-                      dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
-                      name="aggressive"
-                    />
-                  </RechartsLineChart>
-                </ResponsiveContainer>
+                <div className="h-64 sm:h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsLineChart data={projectionData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis dataKey="year" stroke="#64748b" fontSize={10} />
+                      <YAxis 
+                        tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
+                        stroke="#64748b" 
+                        fontSize={10} 
+                      />
+                      <Tooltip
+                        formatter={(value: number, name: string) => [
+                          `$${value.toLocaleString()}`,
+                          name.charAt(0).toUpperCase() + name.slice(1)
+                        ]}
+                        labelFormatter={(label) => `Year: ${label}`}
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="conservative"
+                        stroke="#10B981"
+                        strokeWidth={3}
+                        dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
+                        name="conservative"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="moderate"
+                        stroke="#3B82F6"
+                        strokeWidth={3}
+                        dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+                        name="moderate"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="aggressive"
+                        stroke="#EF4444"
+                        strokeWidth={3}
+                        dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
+                        name="aggressive"
+                      />
+                    </RechartsLineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex flex-wrap justify-center gap-4 sm:gap-6 mt-4 text-xs sm:text-sm">
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                    <span>Conservative (5.5%)</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                    <span>Moderate (7.5%)</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                    <span>Aggressive (9.5%)</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-wrap justify-center gap-4 sm:gap-6 mt-4 text-xs sm:text-sm">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                  <span>Conservative (5.5%)</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                  <span>Moderate (7.5%)</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                  <span>Aggressive (9.5%)</span>
-                </div>
-              </div>
-            </div>
 
             {/* Smart Portfolio Breakdown */}
             <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-6 sm:p-8 border border-white/50 hover:shadow-3xl transition-all duration-500 group">
@@ -715,7 +718,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                     <div className="text-sm text-slate-600">Balance</div>
                   </div>
                 </div>
-              </h3>
               
               {/* Asset Breakdown */}
               <div className="space-y-4">
