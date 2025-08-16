@@ -7,6 +7,29 @@ interface SignupPageProps {
   onSwitchToLogin: () => void
 }
 
+// Password strength checker
+const checkPasswordStrength = (password: string) => {
+  let score = 0
+  let feedback = []
+  
+  if (password.length >= 8) score += 1
+  else feedback.push('At least 8 characters')
+  
+  if (/[a-z]/.test(password)) score += 1
+  else feedback.push('One lowercase letter')
+  
+  if (/[A-Z]/.test(password)) score += 1
+  else feedback.push('One uppercase letter')
+  
+  if (/\d/.test(password)) score += 1
+  else feedback.push('One number')
+  
+  if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score += 1
+  else feedback.push('One special character')
+  
+  const strength = score <= 1 ? 'weak' : score <= 3 ? 'medium' : 'strong'
+  return { score, strength, feedback }
+}
 export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin }) => {
   const { signUp } = useAuth()
   const [formData, setFormData] = useState({
@@ -23,6 +46,8 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [passwordStrength, setPasswordStrength] = useState({ score: 0, strength: 'weak', feedback: [] })
+  const [passwordsMatch, setPasswordsMatch] = useState(true)
 
   const validateForm = () => {
     if (formData.password !== formData.confirmPassword) {
@@ -59,6 +84,8 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
       setError(error.message)
     } else {
       setSuccess(true)
+      // Store user's name in localStorage for onboarding
+      localStorage.setItem('userFullName', `${formData.firstName} ${formData.lastName}`)
     }
 
     setLoading(false)
@@ -70,6 +97,18 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }))
+    
+    // Check password strength
+    if (name === 'password') {
+      const strength = checkPasswordStrength(value)
+      setPasswordStrength(strength)
+      setPasswordsMatch(value === formData.confirmPassword || formData.confirmPassword === '')
+    }
+    
+    // Check password match
+    if (name === 'confirmPassword') {
+      setPasswordsMatch(value === formData.password || value === '')
+    }
   }
 
   if (success) {
@@ -213,6 +252,36 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              
+              {/* Password Strength Indicator */}
+              {formData.password && (
+                <div className="mt-2">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <div className="flex-1 bg-slate-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          passwordStrength.strength === 'weak' ? 'bg-red-500 w-1/3' :
+                          passwordStrength.strength === 'medium' ? 'bg-yellow-500 w-2/3' :
+                          'bg-green-500 w-full'
+                        }`}
+                      />
+                    </div>
+                    <span className={`text-xs font-medium ${
+                      passwordStrength.strength === 'weak' ? 'text-red-600' :
+                      passwordStrength.strength === 'medium' ? 'text-yellow-600' :
+                      'text-green-600'
+                    }`}>
+                      {passwordStrength.strength.charAt(0).toUpperCase() + passwordStrength.strength.slice(1)}
+                    </span>
+                  </div>
+                  {passwordStrength.feedback.length > 0 && (
+                    <div className="text-xs text-slate-600">
+                      <span>Missing: </span>
+                      <span>{passwordStrength.feedback.join(', ')}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
@@ -228,7 +297,11 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   required
-                  className="w-full pl-10 pr-12 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                   className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                     formData.confirmPassword && !passwordsMatch 
+                       ? 'border-red-300 bg-red-50' 
+                       : 'border-slate-300'
+                   }`}
                   placeholder="Confirm your password"
                 />
                 <button
@@ -239,6 +312,17 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
                   {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              
+              {/* Password Match Indicator */}
+              {formData.confirmPassword && (
+                <div className="mt-2">
+                  <span className={`text-xs ${
+                    passwordsMatch ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {passwordsMatch ? '✓ Passwords match' : '✗ Passwords do not match'}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3">

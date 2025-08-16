@@ -9,8 +9,12 @@ interface OnboardingFlowProps {
 
 export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
   const [step, setStep] = useState(1);
+  
+  // Get user's name from localStorage if available
+  const storedName = localStorage.getItem('userFullName') || '';
+  
   const [formData, setFormData] = useState({
-    name: '',
+    name: storedName,
     age: 30,
     retirementAge: 65,
     annualIncome: 50000,
@@ -31,6 +35,8 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Calculate years to retirement
+  const yearsToRetirement = formData.retirementAge - formData.age;
   const goalOptions = [
     'Maximize retirement savings',
     'Generate steady income',
@@ -54,6 +60,8 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
     } else {
       setSubmitting(true);
       try {
+        // Clear stored name after successful onboarding
+        localStorage.removeItem('userFullName');
         await onComplete({
           name: formData.name,
           age: formData.age,
@@ -121,7 +129,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
               <p className="text-sm sm:text-base text-slate-600">Tell us about yourself to personalize your investment advice</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-2">Full Name</label>
                 <input
                   type="text"
@@ -129,7 +137,11 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                   placeholder="Enter your name"
+                  readOnly={!!storedName}
                 />
+                {storedName && (
+                  <p className="text-xs text-green-600 mt-1">✓ Name imported from your account</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-2">Current Age</label>
@@ -150,6 +162,37 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
                 />
               </div>
             </div>
+            
+            {/* Years to Retirement Display */}
+            {formData.age && formData.retirementAge && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                <div className="flex items-center justify-center space-x-2 mb-2">
+                  <Target className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-900">Investment Timeline</span>
+                </div>
+                <div className="text-2xl font-bold text-blue-600 mb-1">
+                  {yearsToRetirement > 0 ? yearsToRetirement : 0} years
+                </div>
+                <p className="text-sm text-blue-700">
+                  {yearsToRetirement > 0 
+                    ? `You have ${yearsToRetirement} years to build your retirement savings`
+                    : yearsToRetirement === 0 
+                      ? 'You are at retirement age'
+                      : 'Please check your retirement age - it should be greater than your current age'
+                  }
+                </p>
+                {yearsToRetirement > 40 && (
+                  <p className="text-xs text-blue-600 mt-2">
+                    ✨ Great! You have plenty of time for long-term growth strategies
+                  </p>
+                )}
+                {yearsToRetirement <= 10 && yearsToRetirement > 0 && (
+                  <p className="text-xs text-orange-600 mt-2">
+                    ⚡ Consider more conservative investment approaches as you near retirement
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         );
       case 2:

@@ -65,7 +65,7 @@ export const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onBack, 
         {/* Header */}
         <div className="text-center mb-8">
           <button
-            onClick={onBack}
+            onClick={onSwitchToLogin}
             className="inline-flex items-center text-slate-600 hover:text-slate-900 mb-6 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
