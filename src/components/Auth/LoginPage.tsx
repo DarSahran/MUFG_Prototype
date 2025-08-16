@@ -51,27 +51,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, onSwitchToSignup, 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center py-12 px-4">
+      {/* Top-left branding */}
+      <div className="fixed top-4 left-4 z-10">
+        <div className="flex items-center space-x-2 cursor-pointer" onClick={onBack}>
+          <div className="p-2 bg-gradient-to-br from-blue-600 to-green-600 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <TrendingUp className="w-5 h-5 text-white" />
+          </div>
+          <div className="hidden sm:block">
+            <h1 className="text-lg font-bold text-slate-900">SuperAI Advisor</h1>
+            <p className="text-xs text-slate-600">Your AI Investment Guide</p>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-md w-full">
         {/* Header */}
         <div className="text-center mb-8">
-          <button
-            onClick={onBack}
-            className="inline-flex items-center text-slate-600 hover:text-slate-900 mb-6 transition-colors duration-200 hover:translate-x-1"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
-          </button>
-          
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-3 mb-6">
-            <div className="p-3 bg-gradient-to-br from-blue-600 to-green-600 rounded-xl">
-              <TrendingUp className="w-8 h-8 text-white" />
-            </div>
-            <div className="text-center sm:text-left">
-              <h1 className="text-2xl font-bold text-slate-900">SuperAI Advisor</h1>
-              <p className="text-sm text-slate-600">Your AI Investment Guide</p>
-            </div>
-          </div>
-          
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Welcome Back</h2>
           <p className="text-sm sm:text-base text-slate-600">Sign in to access your personalized investment dashboard</p>
         </div>
