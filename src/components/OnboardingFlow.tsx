@@ -16,7 +16,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
   const [formData, setFormData] = useState({
     name: storedName,
     age: 30,
-    retirementAge: 65,
+    retirementAge: '',
     annualIncome: 50000,
     totalSavings: 10000,
     currentSuper: 50000,
@@ -36,7 +36,9 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
   const [error, setError] = useState<string | null>(null);
 
   // Calculate years to retirement
-  const yearsToRetirement = formData.retirementAge - formData.age;
+  const yearsToRetirement = formData.retirementAge && !isNaN(Number(formData.retirementAge)) 
+    ? Number(formData.retirementAge) - formData.age 
+    : 0;
   const goalOptions = [
     'Maximize retirement savings',
     'Generate steady income',
@@ -65,7 +67,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
         await onComplete({
           name: formData.name,
           age: formData.age,
-          retirement_age: formData.retirementAge,
+          retirement_age: Number(formData.retirementAge) || 65,
           annual_income: formData.annualIncome,
           total_savings: formData.totalSavings,
           current_super: formData.currentSuper,
@@ -135,13 +137,14 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  className={`w-full px-3 sm:px-4 py-2 sm:py-3 border rounded-lg text-sm sm:text-base ${
+                    storedName 
+                      ? 'border-slate-200 bg-slate-50 text-slate-600 cursor-not-allowed' 
+                      : 'border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                  }`}
                   placeholder="Enter your name"
                   readOnly={!!storedName}
                 />
-                {storedName && (
-                  <p className="text-xs text-green-600 mt-1">✓ Name imported from your account</p>
-                )}
               </div>
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-2">Current Age</label>
@@ -157,14 +160,15 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
                 <input
                   type="number"
                   value={formData.retirementAge}
-                  onChange={(e) => setFormData(prev => ({ ...prev, retirementAge: parseInt(e.target.value) }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, retirementAge: e.target.value }))}
                   className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  placeholder="Enter retirement age"
                 />
               </div>
             </div>
             
             {/* Years to Retirement Display */}
-            {formData.age && formData.retirementAge && (
+            {formData.age && formData.retirementAge && !isNaN(Number(formData.retirementAge)) && Number(formData.retirementAge) > 0 && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
                 <div className="flex items-center justify-center space-x-2 mb-2">
                   <Target className="w-5 h-5 text-blue-600" />
