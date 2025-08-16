@@ -121,14 +121,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
   const accuracyCount = useAnimatedCounter(94);
 
   // Chart data for projections
+  const currentYear = new Date().getFullYear();
   const projectionData = [
-    { year: 2024, conservative: 50000, moderate: 50000, aggressive: 50000 },
-    { year: 2029, conservative: 85000, moderate: 95000, aggressive: 110000 },
-    { year: 2034, conservative: 125000, moderate: 155000, aggressive: 195000 },
-    { year: 2039, conservative: 175000, moderate: 245000, aggressive: 340000 },
-    { year: 2044, conservative: 235000, moderate: 385000, aggressive: 590000 },
-    { year: 2049, conservative: 310000, moderate: 595000, aggressive: 1020000 },
-    { year: 2054, conservative: 400000, moderate: 915000, aggressive: 1750000 }
+    { year: String(currentYear), conservative: 50000, moderate: 50000, aggressive: 50000 },
+    { year: String(currentYear + 5), conservative: 85000, moderate: 95000, aggressive: 110000 },
+    { year: String(currentYear + 10), conservative: 125000, moderate: 155000, aggressive: 195000 },
+    { year: String(currentYear + 15), conservative: 175000, moderate: 245000, aggressive: 340000 },
+    { year: String(currentYear + 20), conservative: 235000, moderate: 385000, aggressive: 590000 },
+    { year: String(currentYear + 25), conservative: 310000, moderate: 595000, aggressive: 1020000 },
+    { year: String(currentYear + 30), conservative: 400000, moderate: 915000, aggressive: 1750000 }
   ];
 
   const portfolioData = [
@@ -520,189 +521,65 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             </div>
           </div>
 
-          {/* Interactive Chart Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-16 lg:mb-20">
-            {/* Growth Projection Chart - Only one chart for 'Your Wealth Journey' */}
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-6 sm:p-8 border border-white/50 hover:shadow-3xl transition-all duration-500 group">
-              <div className="flex items-center mb-6">
-                <div className="p-2 bg-gradient-to-r from-blue-500 to-green-500 rounded-lg mr-3 group-hover:scale-110 transition-transform duration-300">
-                  <LineChart className="w-6 h-6 text-white" />
-                </div>
-                <span className="font-bold text-slate-900 text-xl sm:text-2xl group-hover:text-blue-600 transition-colors duration-300">
-                  Your Wealth Journey
-                </span>
-              </div>
-              <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-xl border border-blue-200">
-                <p className="text-sm text-blue-700">
-                  Starting with just <span className="font-bold text-blue-600">${calculatorInputs.currentSuper.toLocaleString()}</span> and contributing <span className="font-bold text-blue-600">${calculatorInputs.monthlyContribution.toLocaleString()}</span> monthly,
-                  see how different strategies can create vastly different outcomes!
-                </p>
-              </div>
-              <div className="h-80 sm:h-96 relative">
-                <div className="absolute inset-0 bg-gradient-to-t from-white/50 to-transparent pointer-events-none z-10 rounded-lg"></div>
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsLineChart data={projectionData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                    <XAxis dataKey="year" stroke="#64748b" fontSize={12} />
-                    <YAxis
-                      tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
-                      stroke="#64748b"
-                      fontSize={12}
-                    />
-                    <Tooltip
-                      formatter={(value: number, name: string) => [
-                        `$${value.toLocaleString()}`,
-                        name.charAt(0).toUpperCase() + name.slice(1)
-                      ]}
-                      labelFormatter={(label) => `Year: ${label}`}
-                      contentStyle={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '12px',
-                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
-                      }}
-                      wrapperStyle={{ animation: 'none' }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="conservative"
-                      stroke="#EF4444"
-                      strokeWidth={4}
-                      dot={{ fill: '#EF4444', strokeWidth: 3, r: 6 }}
-                      name="conservative"
-                      strokeDasharray="5 5"
-                    />
-                      dataKey="moderate"
-                      stroke="#3B82F6"
-                      strokeWidth={5}
-                      dot={{ fill: '#3B82F6', strokeWidth: 3, r: 8 }}
-                      name="moderate"
-                  </RechartsLineChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex flex-wrap justify-center gap-6 mt-6 text-sm">
-                <div className="flex items-center bg-red-50 px-3 py-2 rounded-full">
-                  <div className="w-4 h-1 bg-red-500 rounded-full mr-2" style={{ clipPath: 'polygon(0 0, 80% 0, 100% 50%, 80% 100%, 0 100%)' }}></div>
-                  <span className="text-red-700 font-medium">Conservative (5.5%)</span>
-                </div>
-                <div className="flex items-center bg-blue-50 px-3 py-2 rounded-full ring-2 ring-blue-200">
-                  <div className="w-4 h-2 bg-blue-500 rounded-full mr-2"></div>
-                  <span className="text-blue-700 font-bold">Moderate (7.5%) ⭐</span>
-                </div>
-                <div className="flex items-center bg-green-50 px-3 py-2 rounded-full">
-                  <div className="w-4 h-1 bg-green-500 rounded-full mr-2"></div>
-                  <span className="text-green-700 font-medium">Aggressive (9.5%)</span>
-                </div>
-              </div>
-            </div>
-            {/* Smart Portfolio Breakdown - improved UI */}
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-6 sm:p-8 border border-white/50 hover:shadow-3xl transition-all duration-500 group flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center group-hover:text-green-600 transition-colors duration-300">
-                    <div className="p-2 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg mr-3 group-hover:scale-110 transition-transform duration-300">
-                      <PieChart className="w-6 h-6 text-white" />
-                    </div>
-                    Smart Money Mix
-                  </h3>
-                  <div className="bg-gradient-to-r from-green-100 to-blue-100 px-3 py-1 rounded-full">
-                    <span className="text-sm font-medium text-green-700">AI Optimized</span>
-                  </div>
-                </div>
-                <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border border-green-200">
-                  <div className="flex items-center mb-2">
-                    <div className="text-2xl mr-2">🧠</div>
-                    <span className="font-semibold text-green-800">AI Insight:</span>
-                  </div>
-                  <p className="text-sm text-green-700">
-                    This portfolio mix is designed to maximize your returns while managing risk.
-                    <strong> 75% growth assets</strong> for wealth building, <strong>25% defensive</strong> for stability.
-                  </p>
-                </div>
-                <div className="h-64 sm:h-80 relative mb-6">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RechartsPieChart>
-                      <Pie
-                        data={portfolioData}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={110}
-                        innerRadius={60}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ name, value }: any) => `${name}: ${value}%`}
-                        labelLine={false}
-                        isAnimationActive={true}
-                        activeShape={renderActiveShape}
-                        // Removed onMouseEnter and onMouseLeave handlers
-                      >
-                        {portfolioData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} cursor="pointer" />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value: any, name: any) => [`${value}%`, name]}
-                        contentStyle={{
-                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '12px',
-                          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
-                        }}
-                      />
-                      <Legend
-                        verticalAlign="bottom"
-                        iconType="circle"
-                        formatter={(value: any, _entry: any, index: number) => {
-                          const color = portfolioData[index]?.color || '#8884d8';
-                          return (
-                            <span style={{ color, fontWeight: 500, fontSize: 14 }}>{value}</span>
-                          );
-                        }}
-                      />
-                    </RechartsPieChart>
-                  </ResponsiveContainer>
-                  {/* Center text removed as annotation is already shown below */}
-                </div>
-                {/* Asset Breakdown */}
-                <div className="space-y-2">
-                  {portfolioData.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors duration-200 group cursor-pointer">
-                      <div className="flex items-center">
-                        <div
-                          className="w-3 h-3 rounded-full mr-2 group-hover:scale-125 transition-transform duration-200"
-                          style={{ backgroundColor: item.color }}
-                        ></div>
-                        <span className="font-medium text-slate-900 group-hover:text-slate-700 text-xs sm:text-sm">{item.name}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-16 bg-slate-200 rounded-full h-1">
-                          <div
-                            className="h-1 rounded-full transition-all duration-500 group-hover:h-2"
-                            style={{ backgroundColor: item.color, width: `${item.value * 2.5}%` }}
-                          />
-                        </div>
-                        <span className="font-bold text-slate-900 w-8 text-right text-xs sm:text-sm">{item.value}%</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {/* Why This Works */}
-                <div className="mt-4 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
-                  <div className="flex items-center mb-2">
-                    <div className="text-2xl mr-2">✨</div>
-                    <span className="font-semibold text-purple-800">Why This Works:</span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-purple-700">
-                    <strong>75% Growth Assets</strong> capture market upside over decades, while
-                    <strong> 25% Defensive Assets</strong> provide stability during market downturns.
-                    This balance has historically delivered strong long-term returns.
-                  </p>
-                </div>
-              </div>
-            </div>
+<div className="rounded-2xl shadow-xl bg-white p-8 border border-blue-100 mb-12">
+  <div className="flex items-center mb-6">
+    <div className="bg-gradient-to-r from-blue-500 to-green-500 rounded-lg p-3 mr-3">
+      <LineChart className="w-7 h-7 text-white" />
+    </div>
+    <span className="font-bold text-slate-900 text-2xl">Your Wealth Journey</span>
+  </div>
+  <div className="bg-blue-50 rounded-xl p-6 mb-8 border border-blue-200">
+    <p className="text-blue-700 text-base">
+      Starting with <span className="font-bold text-blue-600">${calculatorInputs.currentSuper.toLocaleString()}</span> and contributing <span className="font-bold text-blue-600">${calculatorInputs.monthlyContribution.toLocaleString()}</span> monthly, see how your strategy grows your wealth!
+    </p>
+  </div>
+  <div className="h-80 relative">
+    <ResponsiveContainer width="100%" height="100%">
+      <RechartsLineChart data={projectionData} margin={{top: 30, right: 30, left: 0, bottom: 0}}>
+        <CartesianGrid strokeDasharray="4 4" stroke="#e0e7ef" />
+        <XAxis dataKey="year" stroke="#334155" fontSize={13}/>
+        <YAxis 
+          tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
+          stroke="#334155"
+          fontSize={13}
+        />
+        <Tooltip
+          formatter={(value, name) => {
+            const nameStr = String(name);
+            return [`$${value.toLocaleString()}`, nameStr.charAt(0).toUpperCase() + nameStr.slice(1)];
+          }}
+          labelFormatter={label => `Year: ${label}`}
+          contentStyle={{
+            background: 'white',
+            border: '1px solid #e0e8ef',
+            borderRadius: '12px',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.04)',
+            color: '#334155'
+          }}
+        />
+        <Legend height={50} />
+        <Line type="monotone" dataKey="conservative" stroke="#EF4444" strokeWidth={4} dot={{ fill: '#EF4444', r: 7 }} name="Conservative" strokeDasharray="5 5" />
+        <Line type="monotone" dataKey="moderate" stroke="#3B82F6" strokeWidth={5} dot={{ fill: '#3B82F6', r: 8 }} name="Moderate" />
+        <Line type="monotone" dataKey="aggressive" stroke="#22C55E" strokeWidth={5} dot={{ fill: '#22C55E', r: 8 }} name="Aggressive" />
+      </RechartsLineChart>
+    </ResponsiveContainer>
+  </div>
+  <div className="flex justify-center gap-4 mt-8 text-sm">
+    <div className="flex items-center gap-2 px-3 py-2 rounded-full border bg-red-50 border-red-200">
+      <div className="w-4 h-1 bg-red-500 rounded mr-2"></div>
+      <span className="text-red-700 font-semibold">Conservative (5.5%)</span>
+    </div>
+    <div className="flex items-center gap-2 px-3 py-2 rounded-full border bg-blue-50 border-blue-200">
+      <div className="w-4 h-2 bg-blue-500 rounded mr-2"></div>
+      <span className="text-blue-700 font-bold">Moderate (7.5%) ⭐</span>
+    </div>
+    <div className="flex items-center gap-2 px-3 py-2 rounded-full border bg-green-50 border-green-200">
+      <div className="w-4 h-1 bg-green-500 rounded mr-2"></div>
+      <span className="text-green-700 font-semibold">Aggressive (9.5%)</span>
+    </div>
+  </div>
+</div>
 
-
-          </div>
 
 
 
@@ -724,7 +601,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 <span>Start My Wealth Plan</span>
                 <ArrowRight className="w-6 h-6 ml-2" />
               </button>
-              <p className="text-blue-200 text-sm mt-4">
+              <p className="text-blue-100 text-sm mt-4">
                 Free analysis • No credit card required • Takes 5 minutes
               </p>
             </div>
@@ -872,7 +749,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 <div className="text-center">
                   <p className="text-xs sm:text-sm text-slate-600 mb-1">Projected Balance</p>
                   <p className="text-xl sm:text-2xl font-bold text-blue-600 animate-pulse">
-                    ${calculateProjection().toLocaleString()}
+                    {calculateProjection().toLocaleString()}
                   </p>
                   <p className="text-[10px] sm:text-xs text-slate-500 mt-1">Based on 7.5% annual return</p>
                 </div>
