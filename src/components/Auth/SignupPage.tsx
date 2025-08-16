@@ -143,38 +143,38 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
         <div className="text-center mb-8">
           <button
             onClick={onBack}
-            className="inline-flex items-center text-slate-600 hover:text-slate-900 mb-6 transition-colors"
+            className="inline-flex items-center text-slate-600 hover:text-slate-900 mb-6 transition-colors duration-200 hover:translate-x-1"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Home
           </button>
           
-          <div className="flex items-center justify-center space-x-3 mb-6">
+          <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-3 mb-6">
             <div className="p-3 bg-gradient-to-br from-blue-600 to-green-600 rounded-xl">
               <TrendingUp className="w-8 h-8 text-white" />
             </div>
-            <div>
+            <div className="text-center sm:text-left">
               <h1 className="text-2xl font-bold text-slate-900">SuperAI Advisor</h1>
               <p className="text-sm text-slate-600">Your AI Investment Guide</p>
             </div>
           </div>
           
-          <h2 className="text-3xl font-bold text-slate-900 mb-2">Create Your Account</h2>
-          <p className="text-slate-600">Start your journey to financial freedom</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Create Your Account</h2>
+          <p className="text-sm sm:text-base text-slate-600">Start your journey to financial freedom</p>
         </div>
 
         {/* Signup Form */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
+        <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 border border-slate-200">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-700 text-sm">{error}</p>
+              <div className="p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700 text-xs sm:text-sm">{error}</p>
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="firstName" className="block text-xs sm:text-sm font-medium text-slate-700 mb-2">
                   First Name
                 </label>
                 <div className="relative">
@@ -186,14 +186,14 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
                     value={formData.firstName}
                     onChange={handleInputChange}
                     required
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
                     placeholder="First name"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="lastName" className="block text-xs sm:text-sm font-medium text-slate-700 mb-2">
                   Last Name
                 </label>
                 <input
@@ -203,14 +203,14 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
                   value={formData.lastName}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
                   placeholder="Last name"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+              <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-slate-700 mb-2">
                 Email Address
               </label>
               <div className="relative">
@@ -222,14 +222,14 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
                   value={formData.email}
                   onChange={handleInputChange}
                   required
-                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
                   placeholder="Enter your email"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
+              <label htmlFor="password" className="block text-xs sm:text-sm font-medium text-slate-700 mb-2">
                 Password
               </label>
               <div className="relative">
@@ -241,7 +241,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
                   value={formData.password}
                   onChange={handleInputChange}
                   required
-                  className="w-full pl-10 pr-12 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-12 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
                   placeholder="Create a password"
                 />
                 <button
@@ -285,7 +285,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 mb-2">
+              <label htmlFor="confirmPassword" className="block text-xs sm:text-sm font-medium text-slate-700 mb-2">
                 Confirm Password
               </label>
               <div className="relative">
@@ -297,7 +297,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   required
-                   className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                   className={`w-full pl-10 pr-12 py-2 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base ${
                      formData.confirmPassword && !passwordsMatch 
                        ? 'border-red-300 bg-red-50' 
                        : 'border-slate-300'
@@ -332,9 +332,9 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
                   name="agreeToTerms"
                   checked={formData.agreeToTerms}
                   onChange={handleInputChange}
-                  className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 mt-1"
+                  className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 mt-0.5 flex-shrink-0"
                 />
-                <span className="ml-3 text-sm text-slate-600">
+                <span className="ml-3 text-xs sm:text-sm text-slate-600">
                   I agree to the{' '}
                   <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">
                     Terms of Service
@@ -352,9 +352,9 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
                   name="agreeToMarketing"
                   checked={formData.agreeToMarketing}
                   onChange={handleInputChange}
-                  className="w-5 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 mt-1"
+                  className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 mt-0.5 flex-shrink-0"
                 />
-                <span className="ml-3 text-sm text-slate-600">
+                <span className="ml-3 text-xs sm:text-sm text-slate-600">
                   I'd like to receive investment insights and market updates via email
                 </span>
               </label>
@@ -363,14 +363,14 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg hover:from-blue-700 hover:to-green-700 transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-2 sm:py-3 px-4 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg hover:from-blue-700 hover:to-green-700 transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {loading ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-slate-600">
+            <p className="text-xs sm:text-sm text-slate-600">
               Already have an account?{' '}
               <button
                 onClick={onSwitchToLogin}
@@ -384,7 +384,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
 
         {/* Trust Indicators */}
         <div className="mt-8 text-center">
-          <div className="flex items-center justify-center space-x-6 text-sm text-slate-500">
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-slate-500">
             <div className="flex items-center">
               <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
               Free to start

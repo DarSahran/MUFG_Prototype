@@ -66,37 +66,37 @@ export const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onBack, 
         <div className="text-center mb-8">
           <button
             onClick={onSwitchToLogin}
-            className="inline-flex items-center text-slate-600 hover:text-slate-900 mb-6 transition-colors"
+            className="inline-flex items-center text-slate-600 hover:text-slate-900 mb-6 transition-colors duration-200 hover:translate-x-1"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Sign In
           </button>
           
-          <div className="flex items-center justify-center space-x-3 mb-6">
+          <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-3 mb-6">
             <div className="p-3 bg-gradient-to-br from-blue-600 to-green-600 rounded-xl">
               <TrendingUp className="w-8 h-8 text-white" />
             </div>
-            <div>
+            <div className="text-center sm:text-left">
               <h1 className="text-2xl font-bold text-slate-900">SuperAI Advisor</h1>
               <p className="text-sm text-slate-600">Your AI Investment Guide</p>
             </div>
           </div>
           
-          <h2 className="text-3xl font-bold text-slate-900 mb-2">Reset Password</h2>
-          <p className="text-slate-600">Enter your email address and we'll send you a reset link</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Reset Password</h2>
+          <p className="text-sm sm:text-base text-slate-600">Enter your email address and we'll send you a reset link</p>
         </div>
 
         {/* Reset Form */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
+        <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 border border-slate-200">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-700 text-sm">{error}</p>
+              <div className="p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700 text-xs sm:text-sm">{error}</p>
               </div>
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+              <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-slate-700 mb-2">
                 Email Address
               </label>
               <div className="relative">
@@ -107,7 +107,7 @@ export const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onBack, 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
                   placeholder="Enter your email address"
                 />
               </div>
@@ -116,14 +116,14 @@ export const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onBack, 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg hover:from-blue-700 hover:to-green-700 transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-2 sm:py-3 px-4 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg hover:from-blue-700 hover:to-green-700 transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {loading ? 'Sending Reset Link...' : 'Send Reset Link'}
             </button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-slate-600">
+            <p className="text-xs sm:text-sm text-slate-600">
               Remember your password?{' '}
               <button
                 onClick={onSwitchToLogin}
