@@ -582,7 +582,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 </div>
               </div>
             </div>
+                <div className="p-2 bg-blue-100 rounded-lg mr-3">
                 <LineChart className="w-6 h-6 mr-3 text-blue-600" />
+                </div>
                 Investment Growth Projections
               </h3>
               <div className="h-64 sm:h-80">
