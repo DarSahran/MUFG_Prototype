@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PerformanceLineChart } from './charts/PerformanceLineChart';
-import { calculationEngine } from '../services/calculationEngine';
+import { calculationEngine } from '../utils/portfolioEngine';
 import { AssetHolding } from '../types/portfolio';
 
 const scenarioSchema = z.object({

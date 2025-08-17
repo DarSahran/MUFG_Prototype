@@ -12,6 +12,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, use
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'combined-ai', label: 'AI Advisor', icon: Bot },
+    { id: 'ai-recommendations', label: 'AI Recommendations', icon: TrendingUp },
     { id: 'investments', label: 'Portfolio', icon: Briefcase },
     { id: 'market', label: 'Market', icon: LineChart },    
     { id: 'forecasting', label: 'Forecasting', icon: Calculator },    

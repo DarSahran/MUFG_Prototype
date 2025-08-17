@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Header } from './components/Header';
 // import { ChatInterface } from './components/ChatInterface';
 import { Dashboard } from './components/Dashboard';
+import { Dashboard as EnhancedDashboard } from './components/Dashboard/Dashboard';
 import { OnboardingFlow } from './components/OnboardingFlow';
 import { EducationCenter } from './components/EducationCenter';
 import { LandingPage } from './components/LandingPage';
@@ -11,8 +12,8 @@ import { ForgotPasswordPage } from './components/Auth/ForgotPasswordPage';
 import { MarketTrends } from './components/MarketTrends';
 import { InvestmentManager } from './components/InvestmentManager';
 import { ForecastingTool } from './components/ForecastingTool';
-// import { AIRecommendations } from './components/AIRecommendations';
 import { CombinedAI } from './components/CombinedAI';
+import { AIRecommendations } from './components/AIRecommendations/AIRecommendations';
 import ProfilePage from './components/ProfilePage';
 
 import { useAuth } from './hooks/useAuth';
@@ -138,9 +139,11 @@ function App() {
   const renderCurrentView = () => {
     switch (currentView) {
       case 'dashboard':
-        return <Dashboard userProfile={userProfile} />;
+        return <EnhancedDashboard userProfile={userProfile} />;
       case 'combined-ai':
         return <CombinedAI userProfile={userProfile} />;
+      case 'ai-recommendations':
+        return <AIRecommendations userProfile={userProfile} />;
       case 'education':
         return <EducationCenter />;
       case 'market':
@@ -149,12 +152,10 @@ function App() {
         return <InvestmentManager userProfile={userProfile} />;
       case 'forecasting':
         return <ForecastingTool userProfile={userProfile} />;
-  // case 'ai-recommendations':
-  //   return <AIRecommendations userProfile={userProfile} />;
       case 'profile':
         return <ProfilePage userProfile={userProfile} />;
       default:
-        return <Dashboard userProfile={userProfile} />;
+        return <EnhancedDashboard userProfile={userProfile} />;
     }
   };
 
