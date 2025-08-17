@@ -1,5 +1,4 @@
 import { describe, test, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { PortfolioEngine } from '../../utils/portfolioEngine';
 import { UnifiedAsset } from '../../types/portfolioTypes';
 

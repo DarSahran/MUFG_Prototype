@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { ContextualAdvisor } from '../../services/aiAdvisor/ContextualAdvisor';
+import { contextualAdvisor } from '../../services/aiAdvisor';
 import { UnifiedAsset } from '../../types/portfolioTypes';
 import { UserProfile } from '../../App';
 
@@ -36,7 +36,7 @@ describe('AI Recommendations', () => {
   let mockUserProfile: UserProfile;
 
   beforeEach(() => {
-    advisor = new ContextualAdvisor();
+    advisor = contextualAdvisor;
     
     mockPortfolio = [
       {

@@ -1,6 +1,6 @@
 import { describe, test, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { Dashboard } from '../../components/Dashboard/Dashboard';
+import { Dashboard } from '../../components/Dashboard';
 import { UserProfile } from '../../App';
 
 // Mock the portfolio hook
