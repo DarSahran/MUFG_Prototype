@@ -1,7 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Activity, BarChart3, LineChart, PieChart, RefreshCw, Download, Filter, Globe, AlertCircle, Star, Bell } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, BarChart3, LineChart, PieChart, RefreshCw, Download, Filter, Globe, AlertCircle, Star, Bell, Target } from 'lucide-react';
 import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart as RechartsPieChart, Cell } from 'recharts';
-import { marketDataService, StockData, ChartData } from '../services/marketData';
+import { marketDataService } from '../services/marketData';
+
+interface StockData {
+  symbol: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  volume: number;
+}
+
+interface ChartData {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
 
 interface MarketTrendsProps {
   userProfile?: any;
