@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calculator, TrendingUp, Target, DollarSign, Calendar, BarChart3, Download, Settings, AlertTriangle, CheckCircle, Zap } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, ComposedChart, Bar } from 'recharts';
 import { usePortfolio } from '../hooks/usePortfolio';
-import { calculationEngine } from '../services/calculationEngine';
+import { calculationEngine } from '../utils/portfolioEngine';
 import { UserProfile } from '../App';
 
 interface ForecastingToolProps {
@@ -25,6 +25,12 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
     contributionIncrease: 3.0,
     feeRate: 0.75 // Annual fee percentage
   });
+
+  const scenarios = {
+    conservative: { label: 'Conservative', return: 5.5, description: 'Lower risk, steady growth' },
+    moderate: { label: 'Moderate', return: 7.5, description: 'Balanced risk and return' },
+    optimistic: { label: 'Optimistic', return: 9.5, description: 'Higher risk, maximum growth' },
+  };
 
   useEffect(() => {
     calculateForecast();
@@ -256,55 +262,78 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">AI Investment Advisor</h1>
-              <p className="text-sm sm:text-base text-slate-600">
-                Personalized recommendations for your ${(contextData?.portfolioValue || 0).toLocaleString()} portfolio
-              </p>
-            </div>
-            <button
-              onClick={loadAIData}
-              disabled={loading}
-              className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm sm:text-base"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
-          </div>
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Investment Forecasting Tool</h1>
+          <p className="text-slate-600">Advanced portfolio projections and scenario analysis</p>
         </div>
-        {/* Navigation Tabs */}
-        <div className="bg-white rounded-xl shadow-lg mb-6 lg:mb-8">
-          <div className="border-b border-slate-200">
-            <nav className="flex space-x-4 sm:space-x-6 lg:space-x-8 px-4 sm:px-6 overflow-x-auto">
-              {[
-                { id: 'recommendations', label: 'Recommendations', icon: TrendingUp },
-                { id: 'insights', label: 'Market Insights', icon: AlertCircle },
-                { id: 'chat', label: 'AI Chat', icon: MessageCircle }
-              ].map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setSelectedTab(tab.id as any)}
-                    className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
-                      selectedTab === tab.id
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
+
+        {/* Scenario Comparison */}
+        {renderScenarioComparison()}
+
+        {/* Monte Carlo Chart */}
+        {renderMonteCarloChart()}
+
+        {/* Main Forecast Chart */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-slate-900">Portfolio Forecast</h2>
+            <div className="flex items-center space-x-4">
+              <select
+                value={selectedScenario}
+                onChange={(e) => setSelectedScenario(e.target.value as any)}
+                className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="conservative">Conservative</option>
+                <option value="moderate">Moderate</option>
+                <option value="optimistic">Optimistic</option>
+              </select>
+            </div>
           </div>
-          <div className="p-4 sm:p-6">
-            {selectedTab === 'recommendations' && renderRecommendations()}
-            {selectedTab === 'insights' && renderInsights()}
-            {selectedTab === 'chat' && renderChat()}
+          
+          <div className="h-96">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={forecastData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="year" stroke="#64748b" fontSize={12} />
+                <YAxis 
+                  tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
+                  stroke="#64748b"
+                  fontSize={12}
+                />
+                <Tooltip
+                  formatter={(value: number, name: string) => [
+                    formatCurrency(value), 
+                    name === 'totalValue' ? 'Portfolio Value' :
+                    name === 'contributions' ? 'Total Contributions' :
+                    name === 'growth' ? 'Investment Growth' : name
+                  ]}
+                  labelFormatter={(label) => `Year: ${label}`}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="contributions"
+                  stackId="1"
+                  stroke="#10b981"
+                  fill="#10b981"
+                  fillOpacity={0.6}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="growth"
+                  stackId="1"
+                  stroke="#3b82f6"
+                  fill="#3b82f6"
+                  fillOpacity={0.8}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="totalValue"
+                  stroke="#1f2937"
+                  strokeWidth={3}
+                  dot={false}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>

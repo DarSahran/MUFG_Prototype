@@ -3,7 +3,7 @@ import { Send, Bot, User, TrendingUp, DollarSign, Target, AlertCircle, Star, Ref
 import { geminiService, InvestmentRecommendation, MarketInsight } from '../services/geminiService';
 import { marketDataService } from '../services/marketData';
 import { usePortfolio } from '../hooks/usePortfolio';
-import { calculationEngine } from '../services/calculationEngine';
+import { calculationEngine } from '../utils/portfolioEngine';
 import { UserProfile } from '../App';
 
 interface CombinedAIProps {

@@ -1,4 +1,4 @@
-import { PortfolioCalculationEngine } from '../calculationEngine';
+import { PortfolioCalculationEngine } from '../../utils/portfolioEngine';
 import { AssetHolding } from '../../types/portfolio';
 
 describe('PortfolioCalculationEngine', () => {
