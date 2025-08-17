@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calculator, TrendingUp, Target, DollarSign, Calendar, BarChart3, Download, Settings, AlertTriangle, CheckCircle, Zap } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, ComposedChart, Bar } from 'recharts';
 import { usePortfolio } from '../hooks/usePortfolio';
-import { calculationEngine } from '../utils/portfolioEngine';
+import { portfolioEngine } from '../utils/portfolioEngine';
 import { UserProfile } from '../App';
 
 interface ForecastingToolProps {
@@ -41,8 +41,27 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
 
   const calculateForecast = () => {
     try {
-      const projections = calculationEngine.calculatePortfolioProjections(
-        holdings,
+      // Convert holdings to unified assets
+      const unifiedAssets = holdings.map(holding => ({
+        id: holding.id,
+        type: holding.type,
+        symbol: holding.symbol,
+        name: holding.name,
+        quantity: holding.quantity,
+        purchasePrice: holding.purchasePrice,
+        currentPrice: holding.currentPrice,
+        value: holding.quantity * holding.currentPrice,
+        currency: holding.currency,
+        region: holding.region,
+        exchange: holding.exchange,
+        purchaseDate: holding.purchaseDate,
+        expectedReturn: 0.075,
+        volatility: 0.15,
+        metadata: holding.metadata || {},
+      }));
+
+      const projections = portfolioEngine.calculatePortfolioProjections(
+        unifiedAssets,
         customInputs.monthlyContribution,
         customInputs.yearsToForecast,
         retirementGoal
@@ -86,7 +105,7 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
   };
 
   const runMonteCarloSimulation = () => {
-    // This would use the calculation engine's Monte Carlo simulation
+    // This would use the portfolio engine's Monte Carlo simulation
     // For now, generate sample data
     const data = [];
     for (let year = 1; year <= Math.min(customInputs.yearsToForecast, 10); year++) {
@@ -222,6 +241,12 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
                   name
                 ]}
                 labelFormatter={(label) => `Year: ${label}`}
+                contentStyle={{
+                  backgroundColor: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                }}
               />
               <Area
                 type="monotone"
