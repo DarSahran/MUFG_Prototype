@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, TrendingUp, DollarSign, Target, AlertCircle, Star, RefreshCw, MessageCircle, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Send, Bot, User, TrendingUp, DollarSign, Target, AlertCircle, Star, RefreshCw, MessageCircle, ThumbsUp, ThumbsDown, Lightbulb, BarChart3, PieChart, Calculator } from 'lucide-react';
 import { geminiService, InvestmentRecommendation, MarketInsight } from '../services/geminiService';
 import { marketDataService } from '../services/marketData';
+import { usePortfolio } from '../hooks/usePortfolio';
+import { calculationEngine } from '../services/calculationEngine';
 import { UserProfile } from '../App';
 
 interface CombinedAIProps {
@@ -14,9 +16,15 @@ interface Message {
   sender: 'user' | 'ai';
   timestamp: Date;
   suggestions?: string[];
+  attachments?: {
+    type: 'chart' | 'calculation' | 'recommendation';
+    data: any;
+  }[];
 }
 
 export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
+  const { holdings, getTotalPortfolioValue } = usePortfolio();
+  
   // Chat State
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -34,6 +42,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
   ]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [contextData, setContextData] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Recommendations/Insights State
@@ -41,6 +50,31 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
   const [insights, setInsights] = useState<MarketInsight[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<'recommendations' | 'insights' | 'chat'>('recommendations');
+
+  // Load user context data
+  useEffect(() => {
+    const loadContextData = async () => {
+      try {
+        const portfolioValue = getTotalPortfolioValue();
+        const projections = calculationEngine.calculatePortfolioProjections(
+          holdings, 
+          userProfile.monthlyContribution, 
+          userProfile.retirementAge - userProfile.age
+        );
+        
+        setContextData({
+          portfolioValue,
+          projections,
+          holdings: holdings.length,
+          yearsToRetirement: userProfile.retirementAge - userProfile.age
+        });
+      } catch (error) {
+        console.error('Error loading context data:', error);
+      }
+    };
+    
+    loadContextData();
+  }, [holdings, userProfile]);
 
   // Chat scroll
   const scrollToBottom = () => {
@@ -50,6 +84,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
 
   // Load AI Data
   useEffect(() => { loadAIData(); }, [userProfile]);
+  
   const loadAIData = async () => {
     setLoading(true);
     try {
@@ -81,21 +116,66 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
   };
 
   // Chat logic
-  const simulateAIResponse = (userMessage: string): string => {
+  const simulateAIResponse = (userMessage: string): { text: string; attachments?: any[] } => {
     const message = userMessage.toLowerCase();
+    
+    // Context-aware responses using actual user data
     if (message.includes('maximize') || message.includes('increase') || message.includes('savings')) {
-      return `Based on your ${userProfile?.riskTolerance} risk profile and ${userProfile?.retirementAge! - userProfile?.age!} years to retirement, I recommend:\n\n1. **Increase Contributions**: Consider boosting your monthly contribution by $200-300. This could add $45,000+ to your retirement balance.\n\n2. **Salary Sacrifice**: Use pre-tax contributions to maximize tax benefits - potentially saving you $1,200 annually.\n\n3. **Asset Allocation**: With your timeframe, consider increasing growth assets to 70-75% for higher long-term returns.\n\n4. **Regular Reviews**: Market conditions change - I recommend quarterly portfolio reviews to stay optimized.\n\nWould you like me to calculate specific projections for any of these strategies?`;
+      const currentValue = contextData?.portfolioValue || userProfile.currentSuper;
+      const projectedIncrease = Math.round(300 * 12 * contextData?.yearsToRetirement * 1.075);
+      
+      return {
+        text: `Based on your ${userProfile?.riskTolerance} risk profile and ${contextData?.yearsToRetirement || 35} years to retirement, I recommend:\n\n1. **Increase Contributions**: Boost your monthly contribution by $200-300. This could add $${projectedIncrease.toLocaleString()}+ to your retirement balance.\n\n2. **Current Portfolio**: Your ${contextData?.holdings || 0} holdings worth $${currentValue.toLocaleString()} show good diversification.\n\n3. **Salary Sacrifice**: Use pre-tax contributions to maximize tax benefits - potentially saving you $1,200 annually.\n\n4. **Asset Allocation**: With your timeframe, consider increasing growth assets to 70-75% for higher long-term returns.\n\nWould you like me to run a detailed projection with these changes?`,
+        attachments: [{
+          type: 'calculation',
+          data: {
+            currentContribution: userProfile.monthlyContribution,
+            recommendedContribution: userProfile.monthlyContribution + 250,
+            projectedIncrease,
+            timeframe: contextData?.yearsToRetirement
+          }
+        }]
+      };
     }
+    
     if (message.includes('risk') || message.includes('tolerance')) {
-      return `Your current ${userProfile?.riskTolerance} risk profile suits your ${userProfile?.retirementAge! - userProfile?.age!}-year investment horizon well. Here's what this means:\n\n**Current Allocation Benefits:**\n- Balanced growth potential with managed volatility\n- Diversification across asset classes\n- Appropriate for medium to long-term goals\n\n**Consider This:**\nGiven your age (${userProfile?.age}) and time to retirement, you might benefit from a slightly more growth-oriented approach. This could potentially increase your retirement balance by 15-20%.\n\n**Risk vs. Reward:**\n- Higher risk = potential for $75,000+ more at retirement\n- Lower risk = more predictable but potentially smaller returns\n\nWould you like me to model different risk scenarios for your specific situation?`;
+      return {
+        text: `Your current ${userProfile?.riskTolerance} risk profile suits your ${contextData?.yearsToRetirement}-year investment horizon well. Here's what this means:\n\n**Current Portfolio Analysis:**\n- Total Value: $${(contextData?.portfolioValue || 0).toLocaleString()}\n- Holdings: ${contextData?.holdings || 0} different assets\n- Diversification: Good spread across asset classes\n\n**Risk Assessment:**\nGiven your age (${userProfile?.age}) and time to retirement, you might benefit from a slightly more growth-oriented approach. This could potentially increase your retirement balance by 15-20%.\n\n**Risk vs. Reward:**\n- Higher risk = potential for $75,000+ more at retirement\n- Lower risk = more predictable but potentially smaller returns\n\nWould you like me to model different risk scenarios for your specific situation?`,
+        attachments: [{
+          type: 'chart',
+          data: {
+            riskProfile: userProfile.riskTolerance,
+            currentAllocation: contextData?.portfolioValue,
+            recommendedChanges: ['Increase international exposure', 'Reduce cash holdings']
+          }
+        }]
+      };
     }
+    
     if (message.includes('contribute') || message.includes('monthly') || message.includes('much')) {
       const current = userProfile?.monthlyContribution || 500;
       const recommended = Math.round(current * 1.4);
       const difference = recommended - current;
-      return `Based on your goals and current balance of $${userProfile?.currentSuper.toLocaleString()}, here's my analysis:\n\n**Current Contribution:** $${current}/month\n**Recommended:** $${recommended}/month (+$${difference})\n\n**Impact of Increase:**\n- Additional retirement savings: ~$${Math.round(difference * 12 * (userProfile?.retirementAge! - userProfile?.age!) * 1.07).toLocaleString()}\n- Tax benefits: Save ~$${Math.round(difference * 12 * 0.15)}/year\n- Retirement income boost: +$${Math.round(difference * 12 * (userProfile?.retirementAge! - userProfile?.age!) * 1.07 * 0.04 / 12)}/month\n\n**Ways to Increase:**\n1. Salary sacrifice (pre-tax)\n2. After-tax contributions\n3. Government co-contributions (if eligible)\n\nShould I help you calculate the optimal contribution strategy?`;
+      const projectedIncrease = Math.round(difference * 12 * contextData?.yearsToRetirement * 1.07);
+      
+      return {
+        text: `Based on your goals and current portfolio value of $${(contextData?.portfolioValue || userProfile.currentSuper).toLocaleString()}, here's my analysis:\n\n**Current Contribution:** $${current}/month\n**Recommended:** $${recommended}/month (+$${difference})\n\n**Impact of Increase:**\n- Additional retirement savings: ~$${projectedIncrease.toLocaleString()}\n- Tax benefits: Save ~$${Math.round(difference * 12 * 0.15)}/year\n- Retirement income boost: +$${Math.round(projectedIncrease * 0.04 / 12)}/month\n\n**Ways to Increase:**\n1. Salary sacrifice (pre-tax)\n2. After-tax contributions\n3. Government co-contributions (if eligible)\n\nShould I help you calculate the optimal contribution strategy?`,
+        attachments: [{
+          type: 'calculation',
+          data: {
+            current,
+            recommended,
+            difference,
+            projectedIncrease,
+            taxSavings: Math.round(difference * 12 * 0.15)
+          }
+        }]
+      };
     }
-    return `I understand you're asking about ${message}. Based on your profile:\n\n- Current Balance: $${userProfile?.currentSuper.toLocaleString()}\n- Risk Profile: ${userProfile?.riskTolerance}\n- Years to Retirement: ${userProfile?.retirementAge! - userProfile?.age!}\n\nLet me provide personalized advice. The superannuation landscape offers many opportunities for optimization, from asset allocation adjustments to contribution strategies and tax-effective structures.\n\nCould you be more specific about what aspect of your investment strategy you'd like to focus on? I can provide detailed analysis on portfolio performance, risk management, or retirement income projections.`;
+    
+    return {
+      text: `I understand you're asking about "${message}". Based on your profile:\n\n- Current Portfolio: $${(contextData?.portfolioValue || userProfile.currentSuper).toLocaleString()}\n- Holdings: ${contextData?.holdings || 0} different assets\n- Risk Profile: ${userProfile?.riskTolerance}\n- Years to Retirement: ${contextData?.yearsToRetirement || 35}\n\nLet me provide personalized advice. The investment landscape offers many opportunities for optimization, from asset allocation adjustments to contribution strategies and tax-effective structures.\n\nCould you be more specific about what aspect of your investment strategy you'd like to focus on? I can provide detailed analysis on portfolio performance, risk management, or retirement income projections.`
+    };
   };
 
   const handleSendMessage = async (text: string) => {
@@ -110,11 +190,13 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
     setInputText('');
     setIsTyping(true);
     setTimeout(() => {
+      const response = simulateAIResponse(text);
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: simulateAIResponse(text),
+        text: response.text,
         sender: 'ai',
         timestamp: new Date(),
+        attachments: response.attachments,
         suggestions: [
           'Tell me more about this strategy',
           'Show me the calculations',
@@ -126,9 +208,38 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
       setIsTyping(false);
     }, 1500);
   };
+
   const handleSuggestionClick = (suggestion: string) => {
     handleSendMessage(suggestion);
   };
+
+  // Enhanced Quick Actions with real data
+  const quickActions = [
+    { 
+      icon: TrendingUp, 
+      text: `Analyze my ${contextData?.holdings || 0} holdings`, 
+      color: 'bg-blue-500',
+      action: () => handleSendMessage(`Please analyze my current ${contextData?.holdings || 0} holdings worth $${(contextData?.portfolioValue || 0).toLocaleString()}`)
+    },
+    { 
+      icon: DollarSign, 
+      text: `Optimize my $${userProfile.monthlyContribution}/month contributions`, 
+      color: 'bg-green-500',
+      action: () => handleSendMessage(`How can I optimize my monthly contributions of $${userProfile.monthlyContribution}?`)
+    },
+    { 
+      icon: Target, 
+      text: `Plan for retirement in ${contextData?.yearsToRetirement || 35} years`, 
+      color: 'bg-purple-500',
+      action: () => handleSendMessage(`Help me plan for retirement in ${contextData?.yearsToRetirement || 35} years`)
+    },
+    { 
+      icon: AlertCircle, 
+      text: `Review my ${userProfile.riskTolerance} risk strategy`, 
+      color: 'bg-orange-500',
+      action: () => handleSendMessage(`Is my ${userProfile.riskTolerance} risk tolerance appropriate for my situation?`)
+    },
+  ];
 
   // UI helpers
   const getRiskColor = (risk: string) => {
@@ -139,6 +250,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
       default: return 'bg-gray-100 text-gray-700';
     }
   };
+
   const getRecommendationColor = (rec: string) => {
     switch (rec) {
       case 'BUY': return 'bg-green-100 text-green-700 border-green-200';
@@ -147,14 +259,6 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
-
-  // Quick Actions
-  const quickActions = [
-    { icon: TrendingUp, text: 'Portfolio Performance', color: 'bg-blue-500' },
-    { icon: DollarSign, text: 'Increase Contributions', color: 'bg-green-500' },
-    { icon: Target, text: 'Retirement Goals', color: 'bg-purple-500' },
-    { icon: AlertCircle, text: 'Risk Assessment', color: 'bg-orange-500' },
-  ];
 
   // Renderers
   const renderRecommendations = () => (
@@ -302,7 +406,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
               return (
                 <button
                   key={index}
-                  onClick={() => handleSendMessage(action.text)}
+                  onClick={action.action || (() => handleSendMessage(action.text))}
                   className="flex flex-col items-center p-2 sm:p-3 rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200"
                 >
                   <div className={`p-1.5 sm:p-2 rounded-lg ${action.color} mb-2`}>
@@ -315,6 +419,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
           </div>
         </div>
       )}
+      
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6" style={{ maxHeight: window.innerWidth < 640 ? 300 : 400 }}>
         {messages.map((message) => (
@@ -341,6 +446,40 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
                 }`}>
                   <p className="whitespace-pre-line text-sm sm:text-base break-words">{message.text}</p>
                 </div>
+                
+                {/* Message Attachments */}
+                {message.attachments && message.attachments.map((attachment, index) => (
+                  <div key={index} className="mt-3 p-4 bg-white border border-slate-200 rounded-lg shadow-sm">
+                    {attachment.type === 'calculation' && (
+                      <div>
+                        <div className="flex items-center space-x-2 mb-3">
+                          <Calculator className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-medium text-slate-900">Calculation Details</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          {Object.entries(attachment.data).map(([key, value]) => (
+                            <div key={key} className="flex justify-between">
+                              <span className="text-slate-600 capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
+                              <span className="font-medium">{typeof value === 'number' ? `$${value.toLocaleString()}` : value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {attachment.type === 'chart' && (
+                      <div>
+                        <div className="flex items-center space-x-2 mb-3">
+                          <BarChart3 className="w-4 h-4 text-green-600" />
+                          <span className="text-sm font-medium text-slate-900">Portfolio Analysis</span>
+                        </div>
+                        <div className="text-sm text-slate-600">
+                          Interactive chart data would be displayed here
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
                 {message.suggestions && (
                   <div className="mt-2 sm:mt-3 flex flex-wrap gap-1 sm:gap-2">
                     {message.suggestions.map((suggestion, index) => (
@@ -378,15 +517,42 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
         )}
         <div ref={messagesEndRef} />
       </div>
+      
       {/* Chat Input */}
       <div className="border-t border-slate-200 p-4 sm:p-6">
+        {/* Smart Suggestions */}
+        {inputText.length === 0 && (
+          <div className="mb-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <Lightbulb className="w-4 h-4 text-yellow-500" />
+              <span className="text-xs font-medium text-slate-700">Smart Suggestions</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                'What if I retire 5 years early?',
+                'Should I rebalance my portfolio?',
+                'How much will I have at retirement?',
+                'Compare my performance to benchmarks'
+              ].map((suggestion, index) => (
+                <button
+                  key={index}
+                  onClick={() => setInputText(suggestion)}
+                  className="px-3 py-1 text-xs bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition-colors"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
         <div className="flex space-x-2 sm:space-x-4">
           <input
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(inputText)}
-            placeholder="Ask me about your superannuation strategy..."
+            placeholder="Ask me about your investment strategy..."
             className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
           />
           <button
@@ -413,7 +579,9 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">AI Investment Advisor</h1>
-              <p className="text-sm sm:text-base text-slate-600">Personalized recommendations powered by artificial intelligence</p>
+              <p className="text-sm sm:text-base text-slate-600">
+                Personalized recommendations for your $${(contextData?.portfolioValue || 0).toLocaleString()} portfolio
+              </p>
             </div>
             <button
               onClick={loadAIData}
@@ -425,6 +593,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
             </button>
           </div>
         </div>
+        
         {/* Navigation Tabs */}
         <div className="bg-white rounded-xl shadow-lg mb-6 lg:mb-8">
           <div className="border-b border-slate-200">

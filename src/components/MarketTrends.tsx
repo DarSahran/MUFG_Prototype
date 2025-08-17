@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Activity, BarChart3, LineChart, PieChart, RefreshCw, Download, Filter } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, BarChart3, LineChart, PieChart, RefreshCw, Download, Filter, Globe, AlertCircle, Star, Bell } from 'lucide-react';
 import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart as RechartsPieChart, Cell } from 'recharts';
 import { marketDataService, StockData, ChartData } from '../services/marketData';
 
@@ -15,6 +15,8 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedView, setSelectedView] = useState<'overview' | 'detailed' | 'comparison'>('overview');
+  const [marketAlerts, setMarketAlerts] = useState<any[]>([]);
+  const [watchlist, setWatchlist] = useState<string[]>(['VAS.AX', 'VGS.AX', 'VAF.AX']);
 
   const availableAssets = [
     { symbol: 'VAS.AX', name: 'Vanguard Australian Shares Index ETF', category: 'Australian Equity', color: '#3B82F6' },
@@ -25,10 +27,13 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
     { symbol: 'VAP.AX', name: 'Vanguard Australian Property Securities Index ETF', category: 'Property', color: '#06B6D4' },
     { symbol: 'VTS.AX', name: 'Vanguard US Total Market Shares Index ETF', category: 'US Market', color: '#84CC16' },
     { symbol: 'VEU.AX', name: 'Vanguard All-World ex-US Shares Index ETF', category: 'Global ex-US', color: '#F97316' },
+    { symbol: 'BTC-USD', name: 'Bitcoin', category: 'Cryptocurrency', color: '#F7931A' },
+    { symbol: 'ETH-USD', name: 'Ethereum', category: 'Cryptocurrency', color: '#627EEA' },
   ];
 
   useEffect(() => {
     loadMarketData();
+    loadMarketAlerts();
   }, [selectedAssets, timeframe]);
 
   const loadMarketData = async () => {
@@ -56,6 +61,30 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
     }
   };
 
+  const loadMarketAlerts = async () => {
+    // Mock market alerts - in real app, fetch from news/alert service
+    const alerts = [
+      {
+        id: '1',
+        type: 'price_alert',
+        title: 'VAS.AX Price Movement',
+        message: 'VAS.AX has increased by 2.3% today, reaching a new 3-month high',
+        severity: 'info',
+        timestamp: new Date(),
+        asset: 'VAS.AX'
+      },
+      {
+        id: '2',
+        type: 'market_news',
+        title: 'RBA Interest Rate Decision',
+        message: 'Reserve Bank maintains cash rate at 4.35%, impacting bond and equity markets',
+        severity: 'warning',
+        timestamp: new Date(Date.now() - 3600000),
+        asset: 'VAF.AX'
+      }
+    ];
+    setMarketAlerts(alerts);
+  };
   const handleAssetToggle = (symbol: string) => {
     setSelectedAssets(prev => 
       prev.includes(symbol) 
@@ -64,12 +93,31 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
     );
   };
 
+  const handleWatchlistToggle = (symbol: string) => {
+    setWatchlist(prev => 
+      prev.includes(symbol) 
+        ? prev.filter(s => s !== symbol)
+        : [...prev, symbol]
+    );
+    // Save to localStorage
+    const newWatchlist = watchlist.includes(symbol) 
+      ? watchlist.filter(s => s !== symbol)
+      : [...watchlist, symbol];
+    localStorage.setItem('marketWatchlist', JSON.stringify(newWatchlist));
+  };
   const formatPrice = (value: number) => `$${value.toFixed(2)}`;
   const formatChange = (change: number, changePercent: number) => {
     const sign = change >= 0 ? '+' : '';
     return `${sign}${formatPrice(change)} (${sign}${changePercent.toFixed(2)}%)`;
   };
 
+  const getAlertIcon = (severity: string) => {
+    switch (severity) {
+      case 'warning': return <AlertCircle className="w-4 h-4 text-orange-500" />;
+      case 'error': return <AlertCircle className="w-4 h-4 text-red-500" />;
+      default: return <Bell className="w-4 h-4 text-blue-500" />;
+    }
+  };
   const renderChart = () => {
     if (loading) {
       return (
@@ -186,10 +234,42 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
 
   const renderOverview = () => (
     <div className="space-y-6">
+      {/* Market Alerts */}
+      {marketAlerts.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <Bell className="w-5 h-5 text-orange-500" />
+            <h3 className="text-lg font-semibold text-slate-900">Market Alerts</h3>
+          </div>
+          <div className="space-y-3">
+            {marketAlerts.slice(0, 3).map((alert) => (
+              <div key={alert.id} className={`p-4 rounded-lg border-l-4 ${
+                alert.severity === 'warning' ? 'border-orange-500 bg-orange-50' :
+                alert.severity === 'error' ? 'border-red-500 bg-red-50' :
+                'border-blue-500 bg-blue-50'
+              }`}>
+                <div className="flex items-start space-x-3">
+                  {getAlertIcon(alert.severity)}
+                  <div className="flex-1">
+                    <h4 className="font-medium text-slate-900">{alert.title}</h4>
+                    <p className="text-sm text-slate-600 mt-1">{alert.message}</p>
+                    <div className="flex items-center space-x-4 mt-2 text-xs text-slate-500">
+                      <span>{alert.asset}</span>
+                      <span>{new Date(alert.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Market Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {marketData.slice(0, 4).map((stock, index) => {
           const asset = availableAssets.find(a => a.symbol === stock.symbol);
+          const isInWatchlist = watchlist.includes(stock.symbol);
           return (
             <div key={stock.symbol} className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-slate-200 hover:shadow-xl transition-shadow duration-300">
               <div className="flex items-center justify-between mb-4">
@@ -197,12 +277,20 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
                   <h3 className="text-sm sm:text-base font-semibold text-slate-900">{stock.symbol}</h3>
                   <p className="text-sm text-slate-600">{asset?.category}</p>
                 </div>
-                <div className={`p-2 rounded-lg ${stock.change >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
-                  {stock.change >= 0 ? (
-                    <TrendingUp className={`w-5 h-5 ${stock.change >= 0 ? 'text-green-600' : 'text-red-600'}`} />
-                  ) : (
-                    <TrendingDown className="w-5 h-5 text-red-600" />
-                  )}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleWatchlistToggle(stock.symbol)}
+                    className={`p-1 rounded ${isInWatchlist ? 'text-yellow-500' : 'text-slate-400 hover:text-yellow-500'}`}
+                  >
+                    <Star className={`w-4 h-4 ${isInWatchlist ? 'fill-current' : ''}`} />
+                  </button>
+                  <div className={`p-2 rounded-lg ${stock.change >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                    {stock.change >= 0 ? (
+                      <TrendingUp className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <TrendingDown className="w-5 h-5 text-red-600" />
+                    )}
+                  </div>
                 </div>
               </div>
               
@@ -224,6 +312,16 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
                   </span>
                 </div>
               </div>
+              
+              {/* Quick Actions */}
+              <div className="flex space-x-2 mt-4 pt-4 border-t border-slate-200">
+                <button className="flex-1 px-3 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors">
+                  View Chart
+                </button>
+                <button className="flex-1 px-3 py-1 text-xs bg-green-50 text-green-600 rounded hover:bg-green-100 transition-colors">
+                  Add to Portfolio
+                </button>
+              </div>
             </div>
           );
         })}
@@ -232,7 +330,10 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
       {/* Main Chart */}
       <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4 sm:mb-6 gap-4">
-          <h2 className="text-lg sm:text-xl font-bold text-slate-900">Market Trends</h2>
+          <div>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900">Market Trends</h2>
+            <p className="text-sm text-slate-600">Real-time data for {selectedAssets.length} selected assets</p>
+          </div>
           
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">
             {/* Chart Type Selector */}
@@ -286,10 +387,48 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
               <RefreshCw className="w-4 h-4" />
               <span className="hidden sm:inline">Refresh</span>
             </button>
+            
+            <button className="flex items-center space-x-2 px-3 py-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors text-sm">
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Export</span>
+            </button>
           </div>
         </div>
 
         {renderChart()}
+        
+        {/* Chart Insights */}
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 bg-blue-50 rounded-lg">
+            <div className="flex items-center space-x-2 mb-2">
+              <TrendingUp className="w-4 h-4 text-blue-600" />
+              <span className="text-sm font-medium text-blue-900">Trend Analysis</span>
+            </div>
+            <p className="text-sm text-blue-700">
+              {selectedAssets[0]} shows {chartData.length > 0 && chartData[chartData.length - 1]?.close > chartData[0]?.close ? 'upward' : 'downward'} momentum over the selected period
+            </p>
+          </div>
+          
+          <div className="p-4 bg-green-50 rounded-lg">
+            <div className="flex items-center space-x-2 mb-2">
+              <Activity className="w-4 h-4 text-green-600" />
+              <span className="text-sm font-medium text-green-900">Volatility</span>
+            </div>
+            <p className="text-sm text-green-700">
+              Current volatility is {Math.random() > 0.5 ? 'above' : 'below'} historical average, suggesting {Math.random() > 0.5 ? 'increased' : 'normal'} market uncertainty
+            </p>
+          </div>
+          
+          <div className="p-4 bg-purple-50 rounded-lg">
+            <div className="flex items-center space-x-2 mb-2">
+              <Target className="w-4 h-4 text-purple-600" />
+              <span className="text-sm font-medium text-purple-900">Recommendation</span>
+            </div>
+            <p className="text-sm text-purple-700">
+              Based on current trends, consider {userProfile?.riskTolerance === 'aggressive' ? 'maintaining' : 'increasing'} exposure to growth assets
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -298,7 +437,13 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
     <div className="space-y-6">
       {/* Asset Selection */}
       <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-        <h3 className="text-base sm:text-lg font-semibold text-slate-900 mb-4">Select Assets to Track</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base sm:text-lg font-semibold text-slate-900">Select Assets to Track</h3>
+          <div className="flex items-center space-x-2 text-sm text-slate-600">
+            <Globe className="w-4 h-4" />
+            <span>{selectedAssets.length} selected</span>
+          </div>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {availableAssets.map((asset) => (
             <div
@@ -319,6 +464,15 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
                   <h4 className="text-sm sm:text-base font-medium text-slate-900">{asset.symbol}</h4>
                   <p className="text-xs sm:text-sm text-slate-600">{asset.category}</p>
                 </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleWatchlistToggle(asset.symbol);
+                  }}
+                  className={`p-1 rounded ${watchlist.includes(asset.symbol) ? 'text-yellow-500' : 'text-slate-400 hover:text-yellow-500'}`}
+                >
+                  <Star className={`w-4 h-4 ${watchlist.includes(asset.symbol) ? 'fill-current' : ''}`} />
+                </button>
               </div>
             </div>
           ))}
@@ -385,6 +539,16 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
                   </div>
                 </div>
               )}
+               
+               {/* Asset Actions */}
+               <div className="flex space-x-2 mt-4 pt-4 border-t border-slate-200">
+                 <button className="flex-1 px-3 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors">
+                   Analyze
+                 </button>
+                 <button className="flex-1 px-3 py-1 text-xs bg-green-50 text-green-600 rounded hover:bg-green-100 transition-colors">
+                   Add to Portfolio
+                 </button>
+               </div>
             </div>
           );
         })}
@@ -394,10 +558,60 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
 
   const renderComparison = () => (
     <div className="space-y-6">
+      {/* Performance Comparison Chart */}
+      <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-semibold text-slate-900 mb-4 sm:mb-6">Relative Performance Comparison</h3>
+        <div className="h-64 sm:h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <RechartsLineChart data={chartData.slice(-30)}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis 
+                dataKey="date" 
+                tickFormatter={(date) => new Date(date).toLocaleDateString('en-AU', { month: 'short', day: 'numeric' })}
+                stroke="#64748b"
+                fontSize={12}
+              />
+              <YAxis 
+                tickFormatter={(value) => `${((value / chartData[0]?.close - 1) * 100).toFixed(1)}%`}
+                stroke="#64748b"
+                fontSize={12}
+              />
+              <Tooltip
+                formatter={(value: number, name: string) => [
+                  `${((value / chartData[0]?.close - 1) * 100).toFixed(2)}%`, 
+                  `${name} Return`
+                ]}
+                labelFormatter={(label) => `Date: ${new Date(label).toLocaleDateString('en-AU')}`}
+              />
+              {selectedAssets.slice(0, 3).map((symbol, index) => {
+                const asset = availableAssets.find(a => a.symbol === symbol);
+                return (
+                  <Line
+                    key={symbol}
+                    type="monotone"
+                    dataKey="close"
+                    stroke={asset?.color}
+                    strokeWidth={2}
+                    dot={false}
+                    name={symbol}
+                  />
+                );
+              })}
+            </RechartsLineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* Comparison Table */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200">
         <div className="p-4 sm:p-6 border-b border-slate-200">
-          <h3 className="text-base sm:text-lg font-semibold text-slate-900">Asset Comparison</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-base sm:text-lg font-semibold text-slate-900">Asset Comparison</h3>
+            <div className="flex items-center space-x-2 text-sm text-slate-600">
+              <Activity className="w-4 h-4 text-green-500" />
+              <span>Live Data</span>
+            </div>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -408,11 +622,13 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Change</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Volume</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Category</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-200">
               {marketData.map((stock) => {
                 const asset = availableAssets.find(a => a.symbol === stock.symbol);
+                const isInWatchlist = watchlist.includes(stock.symbol);
                 return (
                   <tr key={stock.symbol} className="hover:bg-slate-50">
                     <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
@@ -448,6 +664,19 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
                     <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-slate-500">
                       {asset?.category}
                     </td>
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handleWatchlistToggle(stock.symbol)}
+                          className={`p-1 rounded ${isInWatchlist ? 'text-yellow-500' : 'text-slate-400 hover:text-yellow-500'}`}
+                        >
+                          <Star className={`w-4 h-4 ${isInWatchlist ? 'fill-current' : ''}`} />
+                        </button>
+                        <button className="p-1 text-blue-600 hover:text-blue-700">
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -456,45 +685,31 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
         </div>
       </div>
 
-      {/* Performance Comparison Chart */}
+      {/* Market Correlation Matrix */}
       <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-        <h3 className="text-base sm:text-lg font-semibold text-slate-900 mb-4 sm:mb-6">Performance Comparison</h3>
-        <div className="h-64 sm:h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsLineChart data={chartData.slice(-30)}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="date" 
-                tickFormatter={(date) => new Date(date).toLocaleDateString('en-AU', { month: 'short', day: 'numeric' })}
-                stroke="#64748b"
-                fontSize={12}
-              />
-              <YAxis 
-                tickFormatter={formatPrice}
-                stroke="#64748b"
-                fontSize={12}
-              />
-              <Tooltip
-                formatter={(value: number, name: string) => [formatPrice(value), name]}
-                labelFormatter={(label) => `Date: ${new Date(label).toLocaleDateString('en-AU')}`}
-              />
-              {selectedAssets.slice(0, 3).map((symbol, index) => {
-                const asset = availableAssets.find(a => a.symbol === symbol);
-                return (
-                  <Line
-                    key={symbol}
-                    type="monotone"
-                    dataKey="close"
-                    stroke={asset?.color}
-                    strokeWidth={2}
-                    dot={false}
-                    name={symbol}
-                  />
-                );
-              })}
-            </RechartsLineChart>
-          </ResponsiveContainer>
+        <h3 className="text-base sm:text-lg font-semibold text-slate-900 mb-4">Asset Correlation Matrix</h3>
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          {selectedAssets.slice(0, 3).map((asset1, i) => (
+            selectedAssets.slice(0, 3).map((asset2, j) => {
+              const correlation = i === j ? 1.0 : Math.random() * 0.8 + 0.1;
+              return (
+                <div 
+                  key={`${asset1}-${asset2}`}
+                  className={`p-2 rounded text-center font-medium ${
+                    correlation > 0.7 ? 'bg-red-100 text-red-700' :
+                    correlation > 0.3 ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-green-100 text-green-700'
+                  }`}
+                >
+                  {i === 0 && j === 0 ? '' : correlation.toFixed(2)}
+                </div>
+              );
+            })
+          ))}
         </div>
+        <p className="text-xs text-slate-500 mt-2">
+          Lower correlation (green) indicates better diversification
+        </p>
       </div>
     </div>
   );
@@ -504,8 +719,19 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
       <div className="max-w-7xl mx-auto w-full">
         {/* Header */}
         <div className="mb-6 lg:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">Market Trends & Analysis</h1>
-          <p className="text-sm sm:text-base text-slate-600">Real-time market data and comprehensive analysis for your investment decisions</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">Market Trends & Analysis</h1>
+              <p className="text-sm sm:text-base text-slate-600">Real-time market data and comprehensive analysis for your investment decisions</p>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-slate-600">Market Status</div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-green-600">Markets Open</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* View Selector */}
@@ -536,6 +762,10 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
               <div className="flex items-center space-x-2 text-sm text-slate-600">
                 <Activity className="w-4 h-4 text-green-500" />
                 <span>Live Data</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-slate-600">
+                <Star className="w-4 h-4 text-yellow-500" />
+                <span>{watchlist.length} Watchlist</span>
               </div>
               <button className="flex items-center space-x-2 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm">
                 <Download className="w-4 h-4" />

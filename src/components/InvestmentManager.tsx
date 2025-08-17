@@ -1,156 +1,47 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, TrendingUp, TrendingDown, DollarSign, PieChart, BarChart3, Edit3, Trash2, Eye, Calculator } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, DollarSign, PieChart, BarChart3, Edit3, Trash2, Eye, Calculator, Search, Filter, Download, Upload } from 'lucide-react';
+import { AssetSearchModal } from './AssetSearchModal';
+import { usePortfolio } from '../hooks/usePortfolio';
 import { UserProfile } from '../App';
-
-interface Investment {
-  id: string;
-  symbol: string;
-  name: string;
-  type: 'ETF' | 'Stock' | 'Bond' | 'Property' | 'Cash';
-  quantity: number;
-  purchasePrice: number;
-  currentPrice: number;
-  purchaseDate: string;
-  value: number;
-  gain: number;
-  gainPercent: number;
-}
 
 interface InvestmentManagerProps {
   userProfile: UserProfile;
 }
 
 export const InvestmentManager: React.FC<InvestmentManagerProps> = ({ userProfile }) => {
-  const [investments, setInvestments] = useState<Investment[]>([]);
+  const { holdings, loading, addHolding, updateHolding, deleteHolding, getTotalPortfolioValue, getAssetAllocation } = usePortfolio();
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null);
+  const [editingInvestment, setEditingInvestment] = useState<any>(null);
   const [selectedView, setSelectedView] = useState<'overview' | 'detailed' | 'performance'>('overview');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'value' | 'gain' | 'name'>('value');
+
+  const totalValue = getTotalPortfolioValue();
+  const assetAllocation = getAssetAllocation();
   
-  const [newInvestment, setNewInvestment] = useState({
-    symbol: '',
-    name: '',
-    type: 'ETF' as const,
-    quantity: 0,
-    purchasePrice: 0,
-    purchaseDate: new Date().toISOString().split('T')[0]
-  });
-
-  // Mock current prices - in real app, fetch from market data service
-  const mockCurrentPrices: { [key: string]: number } = {
-    'VAS.AX': 89.45,
-    'VGS.AX': 102.67,
-    'VAF.AX': 51.23,
-    'VGE.AX': 67.89,
-    'VDHG.AX': 58.34,
-    'VAP.AX': 78.92
-  };
-
-  useEffect(() => {
-    // Load investments from localStorage or API
-    const savedInvestments = localStorage.getItem('userInvestments');
-    if (savedInvestments) {
-      const parsed = JSON.parse(savedInvestments);
-      setInvestments(updateInvestmentPrices(parsed));
-    } else {
-      // Initialize with some sample data
-      const sampleInvestments = [
-        {
-          id: '1',
-          symbol: 'VAS.AX',
-          name: 'Vanguard Australian Shares Index ETF',
-          type: 'ETF' as const,
-          quantity: 100,
-          purchasePrice: 85.00,
-          currentPrice: 89.45,
-          purchaseDate: '2024-01-15',
-          value: 8945,
-          gain: 445,
-          gainPercent: 5.24
-        },
-        {
-          id: '2',
-          symbol: 'VGS.AX',
-          name: 'Vanguard MSCI Index International Shares ETF',
-          type: 'ETF' as const,
-          quantity: 50,
-          purchasePrice: 98.50,
-          currentPrice: 102.67,
-          purchaseDate: '2024-02-01',
-          value: 5133.50,
-          gain: 208.50,
-          gainPercent: 4.23
-        }
-      ];
-      setInvestments(sampleInvestments);
-    }
-  }, []);
-
-  const updateInvestmentPrices = (investmentList: Investment[]): Investment[] => {
-    return investmentList.map(investment => {
-      const currentPrice = mockCurrentPrices[investment.symbol] || investment.currentPrice;
-      const value = investment.quantity * currentPrice;
-      const gain = value - (investment.quantity * investment.purchasePrice);
-      const gainPercent = (gain / (investment.quantity * investment.purchasePrice)) * 100;
-
-      return {
-        ...investment,
-        currentPrice,
-        value,
-        gain,
-        gainPercent
-      };
-    });
-  };
-
-  const handleAddInvestment = () => {
-    if (!newInvestment.symbol || !newInvestment.name || newInvestment.quantity <= 0 || newInvestment.purchasePrice <= 0) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    const currentPrice = mockCurrentPrices[newInvestment.symbol] || newInvestment.purchasePrice;
-    const value = newInvestment.quantity * currentPrice;
-    const gain = value - (newInvestment.quantity * newInvestment.purchasePrice);
-    const gainPercent = (gain / (newInvestment.quantity * newInvestment.purchasePrice)) * 100;
-
-    const investment: Investment = {
-      id: Date.now().toString(),
-      ...newInvestment,
-      currentPrice,
-      value,
-      gain,
-      gainPercent
-    };
-
-    const updatedInvestments = [...investments, investment];
-    setInvestments(updatedInvestments);
-    localStorage.setItem('userInvestments', JSON.stringify(updatedInvestments));
-
-    setNewInvestment({
-      symbol: '',
-      name: '',
-      type: 'ETF',
-      quantity: 0,
-      purchasePrice: 0,
-      purchaseDate: new Date().toISOString().split('T')[0]
-    });
-    setShowAddModal(false);
-  };
-
-  const handleDeleteInvestment = (id: string) => {
-    const updatedInvestments = investments.filter(inv => inv.id !== id);
-    setInvestments(updatedInvestments);
-    localStorage.setItem('userInvestments', JSON.stringify(updatedInvestments));
-  };
-
-  const totalValue = investments.reduce((sum, inv) => sum + inv.value, 0);
-  const totalGain = investments.reduce((sum, inv) => sum + inv.gain, 0);
+  const totalGain = holdings.reduce((sum, holding) => {
+    const value = holding.quantity * holding.currentPrice;
+    const cost = holding.quantity * holding.purchasePrice;
+    return sum + (value - cost);
+  }, 0);
   const totalGainPercent = totalValue > 0 ? (totalGain / (totalValue - totalGain)) * 100 : 0;
 
-  const assetAllocation = investments.reduce((acc, inv) => {
-    acc[inv.type] = (acc[inv.type] || 0) + inv.value;
-    return acc;
-  }, {} as { [key: string]: number });
+  const filteredHoldings = holdings.filter(holding => 
+    filterType === 'all' || holding.type === filterType
+  ).sort((a, b) => {
+    switch (sortBy) {
+      case 'value':
+        return (b.quantity * b.currentPrice) - (a.quantity * a.currentPrice);
+      case 'gain':
+        const aGain = (a.quantity * a.currentPrice) - (a.quantity * a.purchasePrice);
+        const bGain = (b.quantity * b.currentPrice) - (b.quantity * b.purchasePrice);
+        return bGain - aGain;
+      case 'name':
+        return a.name.localeCompare(b.name);
+      default:
+        return 0;
+    }
+  });
 
   const renderOverview = () => (
     <div className="space-y-6">
@@ -193,7 +84,7 @@ export const InvestmentManager: React.FC<InvestmentManagerProps> = ({ userProfil
             </div>
             <span className="text-sm text-slate-600">Holdings</span>
           </div>
-          <h3 className="text-2xl font-bold text-slate-900">{investments.length}</h3>
+          <h3 className="text-2xl font-bold text-slate-900">{holdings.length}</h3>
           <p className="text-slate-600 text-sm">Active Investments</p>
         </div>
 
@@ -219,27 +110,27 @@ export const InvestmentManager: React.FC<InvestmentManagerProps> = ({ userProfil
               <div key={type} className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className={`w-4 h-4 rounded ${
-                    type === 'ETF' ? 'bg-blue-500' :
-                    type === 'Stock' ? 'bg-green-500' :
-                    type === 'Bond' ? 'bg-purple-500' :
-                    type === 'Property' ? 'bg-orange-500' : 'bg-gray-500'
+                    type === 'etf' ? 'bg-blue-500' :
+                    type === 'stock' ? 'bg-green-500' :
+                    type === 'bond' ? 'bg-purple-500' :
+                    type === 'property' ? 'bg-orange-500' : 'bg-gray-500'
                   }`} />
-                  <span className="font-medium text-slate-900">{type}</span>
+                  <span className="font-medium text-slate-900 capitalize">{type}</span>
                 </div>
                 <div className="flex items-center space-x-3">
                   <div className="w-32 bg-slate-200 rounded-full h-2">
                     <div 
                       className={`h-2 rounded-full ${
-                        type === 'ETF' ? 'bg-blue-500' :
-                        type === 'Stock' ? 'bg-green-500' :
-                        type === 'Bond' ? 'bg-purple-500' :
-                        type === 'Property' ? 'bg-orange-500' : 'bg-gray-500'
+                        type === 'etf' ? 'bg-blue-500' :
+                        type === 'stock' ? 'bg-green-500' :
+                        type === 'bond' ? 'bg-purple-500' :
+                        type === 'property' ? 'bg-orange-500' : 'bg-gray-500'
                       }`}
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
                   <span className="text-sm font-medium text-slate-600 w-12">{percentage.toFixed(1)}%</span>
-                  <span className="text-sm text-slate-600 w-20">${value.toLocaleString()}</span>
+                  <span className="text-sm text-slate-600 w-20">${((totalValue * percentage) / 100).toLocaleString()}</span>
                 </div>
               </div>
             );
@@ -247,24 +138,45 @@ export const InvestmentManager: React.FC<InvestmentManagerProps> = ({ userProfil
         </div>
       </div>
 
-      {/* Recent Investments */}
+      {/* Holdings Table */}
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-slate-900">Your Investments</h3>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Investment</span>
-          </button>
+          <h3 className="text-lg font-semibold text-slate-900">Your Holdings</h3>
+          <div className="flex items-center space-x-3">
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Assets</option>
+              <option value="stock">Stocks</option>
+              <option value="etf">ETFs</option>
+              <option value="bond">Bonds</option>
+              <option value="property">Property</option>
+              <option value="crypto">Crypto</option>
+              <option value="super">Super</option>
+            </select>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Asset</span>
+            </button>
+          </div>
         </div>
 
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-slate-50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Asset</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Type</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Quantity</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Purchase Price</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Current Price</th>
@@ -274,36 +186,54 @@ export const InvestmentManager: React.FC<InvestmentManagerProps> = ({ userProfil
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {investments.map((investment) => (
-                <tr key={investment.id} className="hover:bg-slate-50">
+              {filteredHoldings.map((holding) => {
+                const value = holding.quantity * holding.currentPrice;
+                const cost = holding.quantity * holding.purchasePrice;
+                const gain = value - cost;
+                const gainPercent = cost > 0 ? (gain / cost) * 100 : 0;
+                
+                return (
+                <tr key={holding.id} className="hover:bg-slate-50">
                   <td className="px-4 py-4">
                     <div>
-                      <div className="font-medium text-slate-900">{investment.symbol}</div>
-                      <div className="text-sm text-slate-500">{investment.type}</div>
+                      <div className="font-medium text-slate-900">{holding.symbol || holding.name}</div>
+                      <div className="text-sm text-slate-500 truncate max-w-32">{holding.name}</div>
                     </div>
                   </td>
-                  <td className="px-4 py-4 text-slate-900">{investment.quantity}</td>
-                  <td className="px-4 py-4 text-slate-900">${investment.purchasePrice.toFixed(2)}</td>
-                  <td className="px-4 py-4 text-slate-900">${investment.currentPrice.toFixed(2)}</td>
-                  <td className="px-4 py-4 font-medium text-slate-900">${investment.value.toLocaleString()}</td>
                   <td className="px-4 py-4">
-                    <div className={`font-medium ${investment.gain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {investment.gain >= 0 ? '+' : ''}${investment.gain.toFixed(2)}
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      holding.type === 'stock' ? 'bg-blue-100 text-blue-700' :
+                      holding.type === 'etf' ? 'bg-green-100 text-green-700' :
+                      holding.type === 'bond' ? 'bg-purple-100 text-purple-700' :
+                      holding.type === 'property' ? 'bg-orange-100 text-orange-700' :
+                      holding.type === 'crypto' ? 'bg-red-100 text-red-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {holding.type.toUpperCase()}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4 text-slate-900">{holding.quantity}</td>
+                  <td className="px-4 py-4 text-slate-900">${holding.purchasePrice.toFixed(2)}</td>
+                  <td className="px-4 py-4 text-slate-900">${holding.currentPrice.toFixed(2)}</td>
+                  <td className="px-4 py-4 font-medium text-slate-900">${value.toLocaleString()}</td>
+                  <td className="px-4 py-4">
+                    <div className={`font-medium ${gain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {gain >= 0 ? '+' : ''}${gain.toFixed(2)}
                     </div>
-                    <div className={`text-sm ${investment.gain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {investment.gain >= 0 ? '+' : ''}{investment.gainPercent.toFixed(2)}%
+                    <div className={`text-sm ${gain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {gain >= 0 ? '+' : ''}{gainPercent.toFixed(2)}%
                     </div>
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex space-x-2">
                       <button
-                        onClick={() => setEditingInvestment(investment)}
+                        onClick={() => setEditingInvestment(holding)}
                         className="p-1 text-blue-600 hover:text-blue-800"
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDeleteInvestment(investment.id)}
+                        onClick={() => deleteHolding(holding.id)}
                         className="p-1 text-red-600 hover:text-red-800"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -311,9 +241,147 @@ export const InvestmentManager: React.FC<InvestmentManagerProps> = ({ userProfil
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
+        </div>
+        )}
+        
+        {filteredHoldings.length === 0 && !loading && (
+          <div className="text-center py-12 text-slate-500">
+            <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>No holdings found</p>
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="mt-2 text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Add your first investment
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderDetailed = () => (
+    <div className="space-y-6">
+      {/* Detailed Holdings with Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {filteredHoldings.map((holding) => {
+          const value = holding.quantity * holding.currentPrice;
+          const cost = holding.quantity * holding.purchasePrice;
+          const gain = value - cost;
+          const gainPercent = cost > 0 ? (gain / cost) * 100 : 0;
+          
+          return (
+            <div key={holding.id} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">{holding.symbol || holding.name}</h3>
+                  <p className="text-sm text-slate-600">{holding.name}</p>
+                </div>
+                <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                  holding.type === 'stock' ? 'bg-blue-100 text-blue-700' :
+                  holding.type === 'etf' ? 'bg-green-100 text-green-700' :
+                  holding.type === 'bond' ? 'bg-purple-100 text-purple-700' :
+                  holding.type === 'property' ? 'bg-orange-100 text-orange-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}>
+                  {holding.type.toUpperCase()}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <p className="text-sm text-slate-600">Current Value</p>
+                  <p className="text-xl font-bold text-slate-900">${value.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-600">Gain/Loss</p>
+                  <p className={`text-xl font-bold ${gain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {gain >= 0 ? '+' : ''}${gain.toFixed(2)}
+                  </p>
+                  <p className={`text-sm ${gain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {gain >= 0 ? '+' : ''}{gainPercent.toFixed(2)}%
+                  </p>
+                </div>
+              </div>
+              
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Quantity</span>
+                  <span className="font-medium">{holding.quantity}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Purchase Price</span>
+                  <span className="font-medium">${holding.purchasePrice.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Current Price</span>
+                  <span className="font-medium">${holding.currentPrice.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Purchase Date</span>
+                  <span className="font-medium">{new Date(holding.purchaseDate).toLocaleDateString()}</span>
+                </div>
+              </div>
+              
+              <div className="flex space-x-2 mt-4 pt-4 border-t border-slate-200">
+                <button
+                  onClick={() => setEditingInvestment(holding)}
+                  className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  <span>Edit</span>
+                </button>
+                <button
+                  onClick={() => deleteHolding(holding.id)}
+                  className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const renderPerformance = () => (
+    <div className="space-y-6">
+      {/* Performance Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Total Return</h3>
+          <div className="text-3xl font-bold text-green-600 mb-2">
+            {totalGainPercent >= 0 ? '+' : ''}{totalGainPercent.toFixed(2)}%
+          </div>
+          <p className="text-sm text-slate-600">Since inception</p>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Best Performer</h3>
+          {filteredHoldings.length > 0 && (
+            <>
+              <div className="text-xl font-bold text-slate-900 mb-1">
+                {filteredHoldings.reduce((best, current) => {
+                  const currentGain = ((current.currentPrice - current.purchasePrice) / current.purchasePrice) * 100;
+                  const bestGain = ((best.currentPrice - best.purchasePrice) / best.purchasePrice) * 100;
+                  return currentGain > bestGain ? current : best;
+                }).symbol || 'N/A'}
+              </div>
+              <p className="text-sm text-slate-600">Top gaining asset</p>
+            </>
+          )}
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Diversification Score</h3>
+          <div className="text-3xl font-bold text-blue-600 mb-2">
+            {Math.min(Object.keys(assetAllocation).length * 20, 100)}%
+          </div>
+          <p className="text-sm text-slate-600">Portfolio spread</p>
         </div>
       </div>
     </div>
@@ -354,102 +422,15 @@ export const InvestmentManager: React.FC<InvestmentManagerProps> = ({ userProfil
 
         {/* Content */}
         {selectedView === 'overview' && renderOverview()}
+        {selectedView === 'detailed' && renderDetailed()}
+        {selectedView === 'performance' && renderPerformance()}
 
-        {/* Add Investment Modal */}
-        {showAddModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Add New Investment</h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Symbol</label>
-                  <input
-                    type="text"
-                    value={newInvestment.symbol}
-                    onChange={(e) => setNewInvestment(prev => ({ ...prev, symbol: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="e.g., VAS.AX"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-                  <input
-                    type="text"
-                    value={newInvestment.name}
-                    onChange={(e) => setNewInvestment(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Investment name"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
-                  <select
-                    value={newInvestment.type}
-                    onChange={(e) => setNewInvestment(prev => ({ ...prev, type: e.target.value as any }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="ETF">ETF</option>
-                    <option value="Stock">Stock</option>
-                    <option value="Bond">Bond</option>
-                    <option value="Property">Property</option>
-                    <option value="Cash">Cash</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Quantity</label>
-                    <input
-                      type="number"
-                      value={newInvestment.quantity}
-                      onChange={(e) => setNewInvestment(prev => ({ ...prev, quantity: parseFloat(e.target.value) || 0 }))}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Purchase Price</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={newInvestment.purchasePrice}
-                      onChange={(e) => setNewInvestment(prev => ({ ...prev, purchasePrice: parseFloat(e.target.value) || 0 }))}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Purchase Date</label>
-                  <input
-                    type="date"
-                    value={newInvestment.purchaseDate}
-                    onChange={(e) => setNewInvestment(prev => ({ ...prev, purchaseDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              <div className="flex space-x-3 mt-6">
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddInvestment}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Add Investment
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Asset Search Modal */}
+        <AssetSearchModal
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          region={userProfile.region as any}
+        />
       </div>
     </div>
   );

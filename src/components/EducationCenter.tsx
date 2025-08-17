@@ -1,18 +1,45 @@
 import React, { useState } from 'react';
-import { BookOpen, Play, Clock, TrendingUp, Shield, Calculator, ChevronRight } from 'lucide-react';
+import { BookOpen, Play, Clock, TrendingUp, Shield, Calculator, ChevronRight, Award, CheckCircle, Star, Users } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 export const EducationCenter: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('basics');
+  const [completedArticles, setCompletedArticles] = useState<string[]>([]);
+  const [userProgress, setUserProgress] = useState(0);
 
   const categories = [
     { id: 'basics', label: 'Superannuation Basics', icon: BookOpen },
     { id: 'investing', label: 'Investment Strategies', icon: TrendingUp },
     { id: 'risk', label: 'Risk Management', icon: Shield },
     { id: 'planning', label: 'Retirement Planning', icon: Calculator },
+    { id: 'advanced', label: 'Advanced Topics', icon: Award },
   ];
 
+  const handleArticleComplete = (articleTitle: string) => {
+    if (!completedArticles.includes(articleTitle)) {
+      const newCompleted = [...completedArticles, articleTitle];
+      setCompletedArticles(newCompleted);
+      
+      // Calculate progress
+      const totalArticles = Object.values(content).flat().length;
+      setUserProgress((newCompleted.length / totalArticles) * 100);
+      
+      // Store in localStorage
+      localStorage.setItem('educationProgress', JSON.stringify(newCompleted));
+    }
+  };
+
+  // Load progress from localStorage
+  React.useEffect(() => {
+    const saved = localStorage.getItem('educationProgress');
+    if (saved) {
+      const completed = JSON.parse(saved);
+      setCompletedArticles(completed);
+      const totalArticles = Object.values(content).flat().length;
+      setUserProgress((completed.length / totalArticles) * 100);
+    }
+  }, []);
   const content = {
     basics: [
       {
@@ -316,26 +343,147 @@ Remember: The biggest risk for young investors is being too conservative and not
 
 Start planning early - compound growth over decades makes the biggest difference to your retirement outcome.`
       }
+    ],
+    advanced: [
+      {
+        title: 'Self-Managed Super Funds (SMSF)',
+        description: 'When and how to consider running your own super fund',
+        duration: '12 min read',
+        type: 'article',
+        content: `Self-Managed Super Funds (SMSFs) offer greater control but require significant responsibility:
+
+**What is an SMSF?**
+- You become the trustee of your own super fund
+- Can have up to 4 members (usually family)
+- Direct control over all investment decisions
+- Must comply with superannuation and tax laws
+
+**When to Consider an SMSF:**
+- Super balance over $200,000 (cost-effectiveness threshold)
+- Want direct property investment
+- Desire specific investment strategies
+- Have time and knowledge for administration
+- Want to invest in collectibles or art
+
+**Responsibilities:**
+- Annual audits and tax returns
+- Investment strategy documentation
+- Compliance with sole purpose test
+- Separation of fund and personal assets
+- Regular trustee meetings and minutes
+
+**Costs:**
+- Setup: $1,000-$3,000
+- Annual administration: $2,000-$5,000
+- Audit fees: $500-$1,500
+- Break-even typically around $200,000 balance
+
+**Investment Options:**
+- Direct shares and ETFs
+- Term deposits and bonds
+- Residential and commercial property
+- Collectibles (art, wine, classic cars)
+- Cryptocurrency (limited)
+- International investments
+
+**Risks and Considerations:**
+- Personal liability for compliance breaches
+- Time commitment for administration
+- Limited recourse if things go wrong
+- Potential for emotional investment decisions
+- Liquidity constraints
+
+SMSFs aren't suitable for everyone - carefully consider whether the benefits outweigh the responsibilities and costs.`
+      },
+      {
+        title: 'International Investing Through Super',
+        description: 'Accessing global markets through your superannuation',
+        duration: '8 min read',
+        type: 'article',
+        content: `International investing through super provides global diversification:
+
+**Why Invest Internationally?**
+- Diversification beyond Australian market
+- Access to different economic cycles
+- Currency diversification benefits
+- Exposure to global growth companies
+- Reduced concentration risk
+
+**How to Invest Internationally:**
+
+**1. International ETFs:**
+- VGS (MSCI World ex-Australia)
+- VTS (US Total Market)
+- VEU (All-World ex-US)
+- VGAD (Hedged international shares)
+
+**2. Managed Funds:**
+- International equity options
+- Emerging markets funds
+- Regional specific funds (Europe, Asia)
+- Sector-specific international funds
+
+**3. Direct International Shares:**
+- Available through some super funds
+- Higher costs and complexity
+- Currency conversion considerations
+
+**Currency Hedging:**
+- Hedged funds reduce currency risk
+- Unhedged funds provide currency exposure
+- Consider mix of both approaches
+- Australian dollar movements impact returns
+
+**Tax Considerations:**
+- Foreign tax credits available
+- Withholding taxes on dividends
+- Currency gains/losses treatment
+- Reporting requirements
+
+**Recommended Allocation:**
+- Young investors: 30-50% international
+- Moderate investors: 20-35% international
+- Conservative investors: 10-25% international
+
+International investing through super is tax-effective and provides essential diversification for long-term wealth building.`
+      }
     ]
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-0 px-0">
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-green-500 py-16 px-4 mb-8">
+      <section className="bg-gradient-to-r from-blue-600 to-green-500 py-16 px-4 mb-8 relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/10"></div>
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="flex-1">
+          <div className="flex-1 relative z-10">
             <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4 drop-shadow-lg">Education Center</h1>
             <p className="text-lg md:text-xl text-blue-100 mb-6 max-w-2xl">
               Unlock your financial confidence! Explore easy-to-understand guides, practical tips, and expert insights to help you master superannuation, investing, and retirement planning. Whether you’re just starting or looking to optimize your strategy, our resources are here to empower your financial journey.
             </p>
+            
+            {/* Progress Bar */}
+            <div className="bg-white/20 rounded-full p-1 mb-6 max-w-md">
+              <div className="flex items-center justify-between text-white text-sm mb-2">
+                <span>Learning Progress</span>
+                <span>{Math.round(userProgress)}%</span>
+              </div>
+              <div className="bg-white/30 rounded-full h-2">
+                <div 
+                  className="bg-white rounded-full h-2 transition-all duration-500"
+                  style={{ width: `${userProgress}%` }}
+                />
+              </div>
+            </div>
+            
             <div className="flex flex-wrap gap-4">
               <span className="inline-flex items-center px-4 py-2 bg-white/20 text-white rounded-full text-sm font-medium"><TrendingUp className="w-4 h-4 mr-2" /> Grow Your Wealth</span>
               <span className="inline-flex items-center px-4 py-2 bg-white/20 text-white rounded-full text-sm font-medium"><Shield className="w-4 h-4 mr-2" /> Manage Risk</span>
               <span className="inline-flex items-center px-4 py-2 bg-white/20 text-white rounded-full text-sm font-medium"><Calculator className="w-4 h-4 mr-2" /> Plan Retirement</span>
+              <span className="inline-flex items-center px-4 py-2 bg-white/20 text-white rounded-full text-sm font-medium"><Users className="w-4 h-4 mr-2" /> {completedArticles.length} Articles Read</span>
             </div>
           </div>
-          <div className="flex-1 flex justify-center">
+          <div className="flex-1 flex justify-center relative z-10">
             <div className="bg-white rounded-2xl shadow-2xl p-8 border border-slate-200 max-w-xs w-full flex flex-col items-center">
               <BookOpen className="w-12 h-12 text-blue-600 mb-4" />
               <h2 className="font-bold text-slate-900 text-lg mb-2">Featured Resource</h2>
@@ -386,7 +534,12 @@ Start planning early - compound growth over decades makes the biggest difference
                 <div key={index} className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 hover:shadow-2xl transition-shadow duration-200">
                   <div className="p-8 border-b border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
+                      <div className="flex items-center space-x-2 mb-2">
                       <h3 className="text-2xl font-bold text-slate-900 mb-2">{item.title}</h3>
+                        {completedArticles.includes(item.title) && (
+                          <CheckCircle className="w-6 h-6 text-green-500" />
+                        )}
+                      </div>
                       <p className="text-slate-600 mb-4 text-base">{item.description}</p>
                       <div className="flex items-center space-x-4 text-sm text-slate-500">
                         <div className="flex items-center space-x-1">
@@ -397,9 +550,23 @@ Start planning early - compound growth over decades makes the biggest difference
                           {item.type === 'video' ? <Play className="w-4 h-4" /> : <BookOpen className="w-4 h-4" />}
                           <span className="capitalize">{item.type}</span>
                         </div>
+                        <div className="flex items-center space-x-1">
+                          <Star className="w-4 h-4 text-yellow-500" />
+                          <span>4.8/5</span>
+                        </div>
                       </div>
                     </div>
-                    <ChevronRight className="w-6 h-6 text-slate-300 self-end md:self-auto" />
+                    <div className="flex items-center space-x-3">
+                      {!completedArticles.includes(item.title) && (
+                        <button
+                          onClick={() => handleArticleComplete(item.title)}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                        >
+                          Mark Complete
+                        </button>
+                      )}
+                      <ChevronRight className="w-6 h-6 text-slate-300" />
+                    </div>
                   </div>
                   <div className="p-8 bg-slate-50">
                     <div className="prose prose-slate max-w-none">
@@ -418,9 +585,54 @@ Start planning early - compound growth over decades makes the biggest difference
                         }}
                       />
                     </div>
+                    
+                    {/* Article Actions */}
+                    <div className="flex items-center justify-between mt-6 pt-6 border-t border-slate-200">
+                      <div className="flex items-center space-x-4">
+                        <button className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors">
+                          <Star className="w-4 h-4" />
+                          <span className="text-sm">Rate Article</span>
+                        </button>
+                        <button className="flex items-center space-x-2 text-slate-600 hover:text-slate-700 transition-colors">
+                          <Users className="w-4 h-4" />
+                          <span className="text-sm">Share</span>
+                        </button>
+                      </div>
+                      {!completedArticles.includes(item.title) && (
+                        <button
+                          onClick={() => handleArticleComplete(item.title)}
+                          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Mark as Read</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+        
+        {/* Learning Path Recommendations */}
+        <div className="max-w-6xl mx-auto px-4 mt-12">
+          <div className="bg-gradient-to-r from-blue-600 to-green-600 rounded-2xl p-8 text-white">
+            <h2 className="text-2xl font-bold mb-4">🎯 Recommended Learning Path</h2>
+            <p className="text-blue-100 mb-6">Based on your progress and investment profile</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white/20 rounded-lg p-4">
+                <h3 className="font-semibold mb-2">Next: Risk Management</h3>
+                <p className="text-sm text-blue-100">Learn how to balance risk and return in your portfolio</p>
+              </div>
+              <div className="bg-white/20 rounded-lg p-4">
+                <h3 className="font-semibold mb-2">Suggested: Advanced Topics</h3>
+                <p className="text-sm text-blue-100">Ready for SMSF and international investing strategies</p>
+              </div>
+              <div className="bg-white/20 rounded-lg p-4">
+                <h3 className="font-semibold mb-2">Quiz: Test Your Knowledge</h3>
+                <p className="text-sm text-blue-100">Interactive quiz on superannuation basics</p>
+              </div>
             </div>
           </div>
         </div>

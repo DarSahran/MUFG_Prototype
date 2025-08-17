@@ -211,25 +211,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
 
   const currentWord = dynamicWords[currentWordIndex];
 
-  // 3D hover state for Live Portfolio Analysis card
-  const [card3dStyle, setCard3dStyle] = useState({});
-  const handleCard3dMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const card = e.currentTarget;
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    const rotateX = ((y - centerY) / centerY) * 10; // increase max tilt
-    const rotateY = ((x - centerX) / centerX) * 10;
-    setCard3dStyle({
-      transform: `perspective(700px) rotateX(${-rotateX}deg) rotateY(${rotateY}deg) scale(1.06)`,
-      boxShadow: '0 24px 60px 0 rgba(16,30,54,0.22), 0 2px 8px 0 rgba(16,30,54,0.10)',
-      transition: 'transform 0.18s cubic-bezier(.25,.8,.25,1), box-shadow 0.18s cubic-bezier(.25,.8,.25,1)'
-    });
-  };
-  const handleCard3dLeave = () => setCard3dStyle({ transition: 'transform 0.28s cubic-bezier(.25,.8,.25,1), box-shadow 0.28s cubic-bezier(.25,.8,.25,1)' });
-
   return (
     <div className="min-h-screen bg-white overflow-x-hidden">
       {/* Animated Background Elements */}
@@ -318,12 +299,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
 
             {/* Interactive Dashboard Preview */}
             <div className="relative animate-fade-in-left">
-              <div
-                className="card-3d bg-white rounded-2xl shadow-2xl p-4 sm:p-6 lg:p-8 border border-slate-200 hover:shadow-3xl transition-all duration-500 hover:scale-105"
-                style={card3dStyle}
-                onMouseMove={handleCard3dMove}
-                onMouseLeave={handleCard3dLeave}
-              >
+              <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 lg:p-8 border border-slate-200 hover:shadow-3xl transition-all duration-500 hover:scale-105">
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-600 to-green-600 rounded-full flex items-center justify-center animate-pulse">
                     <TrendingUp className="w-6 h-6 text-white" />

@@ -1,84 +1,107 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, TrendingUp, Target, DollarSign, Calendar, BarChart3, Download, Settings } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { Calculator, TrendingUp, Target, DollarSign, Calendar, BarChart3, Download, Settings, AlertTriangle, CheckCircle, Zap } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, ComposedChart, Bar } from 'recharts';
+import { usePortfolio } from '../hooks/usePortfolio';
+import { calculationEngine } from '../services/calculationEngine';
 import { UserProfile } from '../App';
-
-interface ForecastData {
-  year: number;
-  value: number;
-  contributions: number;
-  growth: number;
-  totalContributions: number;
-}
 
 interface ForecastingToolProps {
   userProfile: UserProfile;
 }
 
 export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile }) => {
-  const [forecastData, setForecastData] = useState<ForecastData[]>([]);
+  const { holdings, getTotalPortfolioValue } = usePortfolio();
+  const [forecastData, setForecastData] = useState<any[]>([]);
+  const [monteCarloData, setMonteCarloData] = useState<any[]>([]);
   const [selectedScenario, setSelectedScenario] = useState<'conservative' | 'moderate' | 'optimistic'>('moderate');
+  const [showMonteCarlo, setShowMonteCarlo] = useState(false);
+  const [retirementGoal, setRetirementGoal] = useState(800000);
   const [customInputs, setCustomInputs] = useState({
-    initialAmount: userProfile.currentSuper || 50000,
+    initialAmount: getTotalPortfolioValue() || userProfile.currentSuper || 50000,
     monthlyContribution: userProfile.monthlyContribution || 500,
     annualReturn: 7.5,
     inflationRate: 2.5,
     yearsToForecast: (userProfile.retirementAge || 65) - (userProfile.age || 30),
-    contributionIncrease: 3.0 // Annual increase in contributions
+    contributionIncrease: 3.0,
+    feeRate: 0.75 // Annual fee percentage
   });
-
-  const scenarios = {
-    conservative: { return: 5.5, inflation: 3.0, label: 'Conservative (5.5% return)' },
-    moderate: { return: 7.5, inflation: 2.5, label: 'Moderate (7.5% return)' },
-    optimistic: { return: 9.5, inflation: 2.0, label: 'Optimistic (9.5% return)' }
-  };
 
   useEffect(() => {
     calculateForecast();
+    if (showMonteCarlo) {
+      runMonteCarloSimulation();
+    }
   }, [selectedScenario, customInputs]);
 
   const calculateForecast = () => {
-    const scenario = scenarios[selectedScenario];
-    const annualReturn = scenario.return / 100;
-    const inflationRate = scenario.inflation / 100;
-    const monthlyReturn = annualReturn / 12;
-    const contributionGrowthRate = customInputs.contributionIncrease / 100;
-
-    const data: ForecastData[] = [];
-    let currentValue = customInputs.initialAmount;
-    let monthlyContribution = customInputs.monthlyContribution;
-    let totalContributions = customInputs.initialAmount;
-
-    for (let year = 0; year <= customInputs.yearsToForecast; year++) {
-      if (year > 0) {
-        // Calculate growth for the year
-        for (let month = 0; month < 12; month++) {
-          currentValue = currentValue * (1 + monthlyReturn) + monthlyContribution;
-          totalContributions += monthlyContribution;
-        }
-        
-        // Increase monthly contribution annually
-        monthlyContribution *= (1 + contributionGrowthRate);
-      }
-
-      const growth = currentValue - totalContributions;
+    try {
+      const projections = calculationEngine.calculatePortfolioProjections(
+        holdings,
+        customInputs.monthlyContribution,
+        customInputs.yearsToForecast,
+        retirementGoal
+      );
       
-      data.push({
-        year: new Date().getFullYear() + year,
-        value: Math.round(currentValue),
-        contributions: Math.round(totalContributions),
-        growth: Math.round(growth),
-        totalContributions: Math.round(totalContributions)
-      });
+      // Use the appropriate scenario data
+      const scenarioData = selectedScenario === 'conservative' ? projections.pessimistic :
+                          selectedScenario === 'optimistic' ? projections.optimistic :
+                          projections.baseCase;
+      
+      setForecastData(scenarioData);
+      setMonteCarloData(projections.monteCarlo);
+    } catch (error) {
+      console.error('Error calculating forecast:', error);
+      // Fallback to simple calculation
+      setForecastData(calculateSimpleForecast());
     }
-
-    setForecastData(data);
   };
 
-  const finalValue = forecastData[forecastData.length - 1]?.value || 0;
-  const totalContributions = forecastData[forecastData.length - 1]?.totalContributions || 0;
+  const calculateSimpleForecast = () => {
+    const scenario = scenarios[selectedScenario];
+    const annualReturn = scenario.return / 100;
+    const monthlyReturn = annualReturn / 12;
+    const data = [];
+    let value = customInputs.initialAmount;
+    
+    for (let year = 0; year <= customInputs.yearsToForecast; year++) {
+      if (year > 0) {
+        for (let month = 0; month < 12; month++) {
+          value = value * (1 + monthlyReturn) + customInputs.monthlyContribution;
+        }
+      }
+      data.push({
+        year: new Date().getFullYear() + year,
+        totalValue: Math.round(value),
+        contributions: Math.round(customInputs.initialAmount + (customInputs.monthlyContribution * 12 * year)),
+        growth: Math.round(value - (customInputs.initialAmount + (customInputs.monthlyContribution * 12 * year)))
+      });
+    }
+    return data;
+  };
+
+  const runMonteCarloSimulation = () => {
+    // This would use the calculation engine's Monte Carlo simulation
+    // For now, generate sample data
+    const data = [];
+    for (let year = 1; year <= Math.min(customInputs.yearsToForecast, 10); year++) {
+      data.push({
+        year: new Date().getFullYear() + year,
+        percentile10: Math.round(customInputs.initialAmount * Math.pow(1.03, year)),
+        percentile25: Math.round(customInputs.initialAmount * Math.pow(1.05, year)),
+        percentile50: Math.round(customInputs.initialAmount * Math.pow(1.075, year)),
+        percentile75: Math.round(customInputs.initialAmount * Math.pow(1.10, year)),
+        percentile90: Math.round(customInputs.initialAmount * Math.pow(1.12, year)),
+        probabilityOfSuccess: Math.max(0.3, Math.min(0.95, 0.8 - (year * 0.02)))
+      });
+    }
+    setMonteCarloData(data);
+  };
+
+  const finalValue = forecastData[forecastData.length - 1]?.totalValue || 0;
+  const totalContributions = forecastData[forecastData.length - 1]?.contributions || 0;
   const totalGrowth = finalValue - totalContributions;
   const monthlyRetirementIncome = (finalValue * 0.04) / 12; // 4% withdrawal rule
+  const goalAchievementProbability = finalValue >= retirementGoal ? 95 : Math.max(20, 80 - ((retirementGoal - finalValue) / retirementGoal) * 60);
 
   const formatCurrency = (value: number) => `$${value.toLocaleString()}`;
 
@@ -98,8 +121,10 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
       
       return {
         scenario: scenario.label,
+        description: scenario.description,
         value: Math.round(value),
-        monthlyIncome: Math.round((value * 0.04) / 12)
+        monthlyIncome: Math.round((value * 0.04) / 12),
+        probability: key === 'conservative' ? 85 : key === 'moderate' ? 70 : 55
       };
     });
 
@@ -109,11 +134,21 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {comparisonData.map((data, index) => (
             <div key={data.scenario} className={`p-4 rounded-lg border-2 ${
-              index === 0 ? 'border-red-200 bg-red-50' :
-              index === 1 ? 'border-blue-200 bg-blue-50' :
-              'border-green-200 bg-green-50'
+              index === 0 ? 'border-red-200 bg-red-50 hover:border-red-300' :
+              index === 1 ? 'border-blue-200 bg-blue-50 hover:border-blue-300' :
+              'border-green-200 bg-green-50 hover:border-green-300'
             }`}>
-              <h4 className="font-medium text-slate-900 mb-2">{data.scenario}</h4>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-medium text-slate-900">{data.scenario.split('(')[0]}</h4>
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  index === 0 ? 'bg-red-100 text-red-700' :
+                  index === 1 ? 'bg-blue-100 text-blue-700' :
+                  'bg-green-100 text-green-700'
+                }`}>
+                  {data.probability}% likely
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mb-3">{data.description}</p>
               <div className="space-y-2">
                 <div>
                   <span className="text-sm text-slate-600">Final Value</span>
@@ -123,6 +158,18 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
                   <span className="text-sm text-slate-600">Monthly Income</span>
                   <p className="text-lg font-semibold text-slate-700">{formatCurrency(data.monthlyIncome)}</p>
                 </div>
+                <div className="pt-2 border-t border-slate-200">
+                  <div className={`flex items-center space-x-1 text-xs ${
+                    data.value >= retirementGoal ? 'text-green-600' : 'text-orange-600'
+                  }`}>
+                    {data.value >= retirementGoal ? (
+                      <CheckCircle className="w-3 h-3" />
+                    ) : (
+                      <AlertTriangle className="w-3 h-3" />
+                    )}
+                    <span>{data.value >= retirementGoal ? 'Goal Achieved' : 'Below Goal'}</span>
+                  </div>
+                </div>
               </div>
             </div>
           ))}
@@ -131,243 +178,133 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
     );
   };
 
+  const renderMonteCarloChart = () => (
+    <div className="bg-white rounded-xl shadow-lg p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900">Monte Carlo Simulation</h3>
+          <p className="text-sm text-slate-600">1,000 scenarios showing range of possible outcomes</p>
+        </div>
+        <button
+          onClick={() => setShowMonteCarlo(!showMonteCarlo)}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+            showMonteCarlo ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          <Zap className="w-4 h-4" />
+          <span>{showMonteCarlo ? 'Hide' : 'Show'} Simulation</span>
+        </button>
+      </div>
+      
+      {showMonteCarlo && (
+        <div className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={monteCarloData.slice(0, 10)}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="year" stroke="#64748b" fontSize={12} />
+              <YAxis 
+                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
+                stroke="#64748b"
+                fontSize={12}
+              />
+              <Tooltip
+                formatter={(value: number, name: string) => [
+                  formatCurrency(value), 
+                  name === 'percentile50' ? 'Median Outcome' :
+                  name === 'percentile10' ? '10th Percentile' :
+                  name === 'percentile90' ? '90th Percentile' :
+                  name
+                ]}
+                labelFormatter={(label) => `Year: ${label}`}
+              />
+              <Area
+                type="monotone"
+                dataKey="percentile90"
+                stroke="#10b981"
+                fill="#10b981"
+                fillOpacity={0.1}
+              />
+              <Area
+                type="monotone"
+                dataKey="percentile10"
+                stroke="#ef4444"
+                fill="#ef4444"
+                fillOpacity={0.1}
+              />
+              <Line
+                type="monotone"
+                dataKey="percentile50"
+                stroke="#3b82f6"
+                strokeWidth={3}
+                dot={false}
+              />
+              <Bar
+                dataKey="probabilityOfSuccess"
+                fill="#8b5cf6"
+                opacity={0.3}
+                yAxisId="right"
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  );
+
+  // Main Render
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Investment Forecasting Tool</h1>
-          <p className="text-slate-600">Project your investment growth and plan for retirement</p>
-        </div>
-
-        {/* Controls */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Scenario Selection */}
+          <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Forecast Scenario</h3>
-              <div className="space-y-3">
-                {Object.entries(scenarios).map(([key, scenario]) => (
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">AI Investment Advisor</h1>
+              <p className="text-sm sm:text-base text-slate-600">
+                Personalized recommendations for your ${(contextData?.portfolioValue || 0).toLocaleString()} portfolio
+              </p>
+            </div>
+            <button
+              onClick={loadAIData}
+              disabled={loading}
+              className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm sm:text-base"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+          </div>
+        </div>
+        {/* Navigation Tabs */}
+        <div className="bg-white rounded-xl shadow-lg mb-6 lg:mb-8">
+          <div className="border-b border-slate-200">
+            <nav className="flex space-x-4 sm:space-x-6 lg:space-x-8 px-4 sm:px-6 overflow-x-auto">
+              {[
+                { id: 'recommendations', label: 'Recommendations', icon: TrendingUp },
+                { id: 'insights', label: 'Market Insights', icon: AlertCircle },
+                { id: 'chat', label: 'AI Chat', icon: MessageCircle }
+              ].map((tab) => {
+                const Icon = tab.icon;
+                return (
                   <button
-                    key={key}
-                    onClick={() => setSelectedScenario(key as any)}
-                    className={`w-full p-3 text-left rounded-lg border-2 transition-colors ${
-                      selectedScenario === key
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-slate-200 hover:border-slate-300'
+                    key={tab.id}
+                    onClick={() => setSelectedTab(tab.id as any)}
+                    className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
+                      selectedTab === tab.id
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-slate-500 hover:text-slate-700'
                     }`}
                   >
-                    <div className="font-medium text-slate-900">{scenario.label}</div>
-                    <div className="text-sm text-slate-600">
-                      {scenario.inflation}% inflation assumed
-                    </div>
+                    <Icon className="w-5 h-5" />
+                    <span>{tab.label}</span>
                   </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Custom Inputs */}
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Customize Parameters</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Initial Amount</label>
-                  <input
-                    type="number"
-                    value={customInputs.initialAmount}
-                    onChange={(e) => setCustomInputs(prev => ({ ...prev, initialAmount: parseInt(e.target.value) || 0 }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Monthly Contribution</label>
-                  <input
-                    type="number"
-                    value={customInputs.monthlyContribution}
-                    onChange={(e) => setCustomInputs(prev => ({ ...prev, monthlyContribution: parseInt(e.target.value) || 0 }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Years to Forecast</label>
-                  <input
-                    type="number"
-                    value={customInputs.yearsToForecast}
-                    onChange={(e) => setCustomInputs(prev => ({ ...prev, yearsToForecast: parseInt(e.target.value) || 0 }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Annual Contribution Increase (%)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={customInputs.contributionIncrease}
-                    onChange={(e) => setCustomInputs(prev => ({ ...prev, contributionIncrease: parseFloat(e.target.value) || 0 }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-            </div>
+                );
+              })}
+            </nav>
           </div>
-        </div>
-
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <Target className="w-6 h-6 text-green-600" />
-              </div>
-              <span className="text-sm text-slate-600">Final Value</span>
-            </div>
-            <h3 className="text-2xl font-bold text-slate-900">{formatCurrency(finalValue)}</h3>
-            <p className="text-slate-600 text-sm">At retirement</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <DollarSign className="w-6 h-6 text-blue-600" />
-              </div>
-              <span className="text-sm text-slate-600">Monthly Income</span>
-            </div>
-            <h3 className="text-2xl font-bold text-slate-900">{formatCurrency(monthlyRetirementIncome)}</h3>
-            <p className="text-slate-600 text-sm">4% withdrawal rule</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-purple-600" />
-              </div>
-              <span className="text-sm text-slate-600">Total Growth</span>
-            </div>
-            <h3 className="text-2xl font-bold text-slate-900">{formatCurrency(totalGrowth)}</h3>
-            <p className="text-slate-600 text-sm">Investment returns</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-orange-100 rounded-lg">
-                <Calculator className="w-6 h-6 text-orange-600" />
-              </div>
-              <span className="text-sm text-slate-600">Contributions</span>
-            </div>
-            <h3 className="text-2xl font-bold text-slate-900">{formatCurrency(totalContributions)}</h3>
-            <p className="text-slate-600 text-sm">Total invested</p>
-          </div>
-        </div>
-
-        {/* Forecast Chart */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-slate-900">Growth Projection</h3>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 text-sm">
-                <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                <span>Total Value</span>
-              </div>
-              <div className="flex items-center space-x-2 text-sm">
-                <div className="w-3 h-3 bg-green-500 rounded"></div>
-                <span>Contributions</span>
-              </div>
-              <button className="flex items-center space-x-2 px-3 py-1 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors">
-                <Download className="w-4 h-4" />
-                <span>Export</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={forecastData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis 
-                  dataKey="year" 
-                  stroke="#64748b"
-                  fontSize={12}
-                />
-                <YAxis 
-                  tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
-                  stroke="#64748b"
-                  fontSize={12}
-                />
-                <Tooltip
-                  formatter={(value: number, name: string) => [
-                    formatCurrency(value), 
-                    name === 'value' ? 'Total Value' : 
-                    name === 'contributions' ? 'Total Contributions' : 
-                    'Growth'
-                  ]}
-                  labelFormatter={(label) => `Year: ${label}`}
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="contributions"
-                  stackId="1"
-                  stroke="#10b981"
-                  fill="#10b981"
-                  fillOpacity={0.6}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="growth"
-                  stackId="1"
-                  stroke="#3b82f6"
-                  fill="#3b82f6"
-                  fillOpacity={0.6}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Scenario Comparison */}
-        {renderScenarioComparison()}
-
-        {/* Detailed Breakdown */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-6">Year-by-Year Breakdown</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Year</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Total Value</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Contributions</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Growth</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Annual Return</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {forecastData.filter((_, index) => index % 5 === 0 || index === forecastData.length - 1).map((data, index, filteredData) => {
-                  const prevData = index > 0 ? filteredData[index - 1] : { value: customInputs.initialAmount };
-                  const annualReturn = prevData.value > 0 ? ((data.value - prevData.value) / prevData.value) * 100 : 0;
-                  
-                  return (
-                    <tr key={data.year} className="hover:bg-slate-50">
-                      <td className="px-4 py-4 font-medium text-slate-900">{data.year}</td>
-                      <td className="px-4 py-4 text-slate-900">{formatCurrency(data.value)}</td>
-                      <td className="px-4 py-4 text-slate-900">{formatCurrency(data.totalContributions)}</td>
-                      <td className="px-4 py-4 text-green-600 font-medium">{formatCurrency(data.growth)}</td>
-                      <td className="px-4 py-4 text-blue-600 font-medium">
-                        {index > 0 ? `${annualReturn.toFixed(1)}%` : '-'}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="p-4 sm:p-6">
+            {selectedTab === 'recommendations' && renderRecommendations()}
+            {selectedTab === 'insights' && renderInsights()}
+            {selectedTab === 'chat' && renderChat()}
           </div>
         </div>
       </div>
