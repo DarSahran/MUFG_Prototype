@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
-import { Bitcoin, TrendingUp, TrendingDown, AlertTriangle, Plus, Edit3, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bitcoin, TrendingUp, TrendingDown, AlertTriangle, Plus, Edit3, Trash2, RefreshCw } from 'lucide-react';
 import { AssetHolding } from '../../../types/portfolio';
 import { UserProfile } from '../../../App';
+import { CryptoAssetModal } from '../../CryptoAssetModal';
+import { usePortfolio } from '../../../hooks/usePortfolio';
+import { useRealTimeData } from '../../../hooks/useRealTimeData';
 
 interface CryptoTabProps {
   holdings: AssetHolding[];
@@ -9,39 +12,74 @@ interface CryptoTabProps {
 }
 
 export const CryptoTab: React.FC<CryptoTabProps> = ({ holdings, userProfile }) => {
-  const [selectedCrypto, setSelectedCrypto] = useState<AssetHolding | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const { updateHolding, deleteHolding } = usePortfolio();
 
   const cryptoHoldings = holdings.filter(h => h.type === 'crypto');
+  const cryptoSymbols = cryptoHoldings.map(h => h.symbol).filter(Boolean) as string[];
+  
+  // Real-time crypto price updates
+  const { prices, lastUpdate, refreshPrices } = useRealTimeData({
+    symbols: cryptoSymbols,
+    interval: 15000, // 15 seconds for crypto
+    enabled: cryptoSymbols.length > 0,
+    assetTypes: Object.fromEntries(cryptoHoldings.map(h => [h.symbol!, 'crypto'])),
+    regions: Object.fromEntries(cryptoHoldings.map(h => [h.symbol!, 'GLOBAL'])),
+  });
+
   const totalCryptoValue = cryptoHoldings.reduce((sum, holding) => 
     sum + (holding.quantity * holding.currentPrice), 0
   );
 
+  const totalCryptoGain = cryptoHoldings.reduce((sum, holding) => {
+    const currentValue = holding.quantity * holding.currentPrice;
+    const purchaseValue = holding.quantity * holding.purchasePrice;
+    return sum + (currentValue - purchaseValue);
+  }, 0);
+
   const cryptoMetrics = {
     totalValue: totalCryptoValue,
+    totalGain: totalCryptoGain,
     dayChange: 2.4,
     weekChange: -5.7,
     monthChange: 12.3,
     volatility: 45.2
   };
 
-  const cryptoRecommendations = [
-    {
-      symbol: 'BTC-USD',
-      name: 'Bitcoin',
-      recommendation: 'HOLD',
-      confidence: 75,
-      reasoning: 'Strong institutional adoption but high volatility',
-      allocation: '2-5%'
-    },
-    {
-      symbol: 'ETH-USD',
-      name: 'Ethereum',
-      recommendation: 'BUY',
-      confidence: 68,
-      reasoning: 'DeFi ecosystem growth and upcoming upgrades',
-      allocation: '1-3%'
+  // Update current prices when real-time data changes
+  useEffect(() => {
+    if (Object.keys(prices).length > 0) {
+      cryptoHoldings.forEach(holding => {
+        if (holding.symbol && prices[holding.symbol]) {
+          const newPrice = prices[holding.symbol].price;
+          if (newPrice !== holding.currentPrice) {
+            updateHolding(holding.id, { currentPrice: newPrice });
+          }
+        }
+      });
     }
-  ];
+  }, [prices]);
+
+  const handleRefreshCrypto = async () => {
+    setRefreshing(true);
+    try {
+      await refreshPrices();
+    } catch (error) {
+      console.error('Error refreshing crypto prices:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleDeleteCrypto = async (holdingId: string) => {
+    if (confirm('Are you sure you want to remove this cryptocurrency from your portfolio?')) {
+      const result = await deleteHolding(holdingId);
+      if (result.error) {
+        alert('Error removing crypto: ' + result.error);
+      }
+    }
+  };
 
   const cryptoRisks = [
     {
@@ -70,6 +108,9 @@ export const CryptoTab: React.FC<CryptoTabProps> = ({ holdings, userProfile }) =
             <div className="p-3 bg-orange-600 rounded-lg">
               <Bitcoin className="w-6 h-6 text-white" />
             </div>
+            <span className="text-sm font-medium text-orange-700">
+              {cryptoHoldings.length} assets
+            </span>
           </div>
           <h3 className="text-2xl font-bold text-slate-900 mb-1">
             ${cryptoMetrics.totalValue.toLocaleString()}
@@ -82,11 +123,20 @@ export const CryptoTab: React.FC<CryptoTabProps> = ({ holdings, userProfile }) =
             <div className="p-3 bg-green-600 rounded-lg">
               <TrendingUp className="w-6 h-6 text-white" />
             </div>
+            <button
+              onClick={handleRefreshCrypto}
+              disabled={refreshing}
+              className="text-sm font-medium text-green-700 hover:text-green-800 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
           </div>
-          <h3 className="text-2xl font-bold text-slate-900 mb-1">
-            +{cryptoMetrics.dayChange}%
+          <h3 className={`text-2xl font-bold mb-1 ${
+            cryptoMetrics.totalGain >= 0 ? 'text-green-600' : 'text-red-600'
+          }`}>
+            {cryptoMetrics.totalGain >= 0 ? '+' : ''}${cryptoMetrics.totalGain.toLocaleString()}
           </h3>
-          <p className="text-sm text-green-700">24h Change</p>
+          <p className="text-sm text-green-700">Total Gain/Loss</p>
         </div>
 
         <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
@@ -94,6 +144,9 @@ export const CryptoTab: React.FC<CryptoTabProps> = ({ holdings, userProfile }) =
             <div className="p-3 bg-red-600 rounded-lg">
               <TrendingDown className="w-6 h-6 text-white" />
             </div>
+            <span className="text-sm font-medium text-red-700">
+              Live Data
+            </span>
           </div>
           <h3 className="text-2xl font-bold text-slate-900 mb-1">
             {cryptoMetrics.weekChange}%
@@ -118,7 +171,10 @@ export const CryptoTab: React.FC<CryptoTabProps> = ({ holdings, userProfile }) =
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-slate-900">Cryptocurrency Holdings</h3>
-          <button className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+          >
             <Plus className="w-4 h-4" />
             <span>Add Crypto</span>
           </button>
@@ -131,6 +187,8 @@ export const CryptoTab: React.FC<CryptoTabProps> = ({ holdings, userProfile }) =
               const purchaseValue = crypto.quantity * crypto.purchasePrice;
               const gain = currentValue - purchaseValue;
               const gainPercent = purchaseValue > 0 ? (gain / purchaseValue) * 100 : 0;
+              const realTimePrice = crypto.symbol ? prices[crypto.symbol]?.price : null;
+              const priceChanged = realTimePrice && realTimePrice !== crypto.currentPrice;
 
               return (
                 <div key={crypto.id} className="border border-slate-200 rounded-lg p-6 hover:shadow-md transition-shadow">
@@ -140,7 +198,12 @@ export const CryptoTab: React.FC<CryptoTabProps> = ({ holdings, userProfile }) =
                         <Bitcoin className="w-6 h-6 text-orange-600" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-slate-900">{crypto.symbol}</h4>
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-bold text-slate-900">{crypto.symbol}</h4>
+                          {priceChanged && (
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                          )}
+                        </div>
                         <p className="text-sm text-slate-600">{crypto.name}</p>
                       </div>
                     </div>
@@ -153,6 +216,11 @@ export const CryptoTab: React.FC<CryptoTabProps> = ({ holdings, userProfile }) =
                       }`}>
                         {gain >= 0 ? '+' : ''}{gainPercent.toFixed(1)}%
                       </div>
+                      {realTimePrice && (
+                        <div className="text-xs text-slate-500">
+                          Live: ${realTimePrice.toLocaleString()}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -167,7 +235,9 @@ export const CryptoTab: React.FC<CryptoTabProps> = ({ holdings, userProfile }) =
                     </div>
                     <div>
                       <span className="text-slate-600">Current Price</span>
-                      <p className="font-medium">${crypto.currentPrice.toLocaleString()}</p>
+                      <p className="font-medium">
+                        ${realTimePrice?.toLocaleString() || crypto.currentPrice.toLocaleString()}
+                      </p>
                     </div>
                     <div>
                       <span className="text-slate-600">Exchange</span>
@@ -180,7 +250,10 @@ export const CryptoTab: React.FC<CryptoTabProps> = ({ holdings, userProfile }) =
                       <Edit3 className="w-4 h-4" />
                       <span>Edit</span>
                     </button>
-                    <button className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors">
+                    <button
+                      onClick={() => handleDeleteCrypto(crypto.id)}
+                      className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                    >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -192,47 +265,14 @@ export const CryptoTab: React.FC<CryptoTabProps> = ({ holdings, userProfile }) =
           <div className="text-center py-12 text-slate-500">
             <Bitcoin className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p className="mb-2">No cryptocurrency holdings found</p>
-            <button className="text-orange-600 hover:text-orange-700 font-medium">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="text-orange-600 hover:text-orange-700 font-medium"
+            >
               Add your first crypto investment
             </button>
           </div>
         )}
-      </div>
-
-      {/* Crypto Recommendations */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-6">Crypto Recommendations</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {cryptoRecommendations.map((rec, index) => (
-            <div key={rec.symbol} className="border border-slate-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h4 className="font-bold text-slate-900">{rec.symbol}</h4>
-                  <p className="text-sm text-slate-600">{rec.name}</p>
-                </div>
-                <div className="text-right">
-                  <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                    rec.recommendation === 'BUY' ? 'bg-green-100 text-green-700' :
-                    rec.recommendation === 'HOLD' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
-                    {rec.recommendation}
-                  </span>
-                  <div className="text-xs text-slate-500 mt-1">{rec.confidence}% confidence</div>
-                </div>
-              </div>
-              
-              <p className="text-sm text-slate-700 mb-4">{rec.reasoning}</p>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-600">Suggested allocation: {rec.allocation}</span>
-                <button className="px-3 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 transition-colors">
-                  Add to Portfolio
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Risk Warning */}
@@ -266,6 +306,73 @@ export const CryptoTab: React.FC<CryptoTabProps> = ({ holdings, userProfile }) =
           </div>
         </div>
       </div>
+
+      {/* Live Market Data */}
+      {cryptoHoldings.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-slate-900">Live Crypto Prices</h3>
+            <div className="flex items-center space-x-2 text-sm text-slate-600">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span>Real-time Updates</span>
+              {lastUpdate && (
+                <span className="text-xs">
+                  Last: {new Date(lastUpdate).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {cryptoHoldings.map((holding) => {
+              const realTimeData = holding.symbol ? prices[holding.symbol] : null;
+              const currentValue = holding.quantity * holding.currentPrice;
+              
+              return (
+                <div key={holding.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="font-bold text-slate-900">{holding.symbol}</h4>
+                      <p className="text-sm text-slate-600 truncate">{holding.name}</p>
+                    </div>
+                    {realTimeData && (
+                      <div className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        realTimeData.changePercent >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {realTimeData.changePercent >= 0 ? '+' : ''}{realTimeData.changePercent.toFixed(2)}%
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Live Price</span>
+                      <span className="font-medium">
+                        ${realTimeData?.price.toLocaleString() || holding.currentPrice.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Holdings Value</span>
+                      <span className="font-medium">${currentValue.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Quantity</span>
+                      <span className="font-medium">{holding.quantity}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Crypto Asset Modal */}
+      <CryptoAssetModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        userProfile={userProfile}
+      />
     </div>
   );
 };

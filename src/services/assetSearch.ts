@@ -102,30 +102,61 @@ class AssetSearchService {
       // First, search in popular assets
       const popularResults = this.fuse.search(query).map(result => result.item);
       
-      // Then search Yahoo Finance API
-      const response = await axios.get(`${this.YAHOO_FINANCE_API}/search`, {
-        params: {
-          q: query,
-          quotesCount: limit,
-          newsCount: 0,
-        },
-        timeout: 5000,
-      });
+      let yahooResults: AssetSearchResult[] = [];
+      
+      try {
+        // Search Yahoo Finance API
+        const response = await axios.get(`${this.YAHOO_FINANCE_API}/search`, {
+          params: {
+            q: query,
+            quotesCount: limit,
+            newsCount: 0,
+          },
+          timeout: 5000,
+        });
 
-      const yahooResults: AssetSearchResult[] = response.data.quotes?.map((quote: any) => ({
-        symbol: quote.symbol,
-        name: quote.longname || quote.shortname || quote.symbol,
-        type: this.mapYahooTypeToAssetType(quote.typeDisp),
-        exchange: quote.exchange || 'Unknown',
-        currency: quote.currency || 'USD',
-        region: this.mapExchangeToRegion(quote.exchange),
-        currentPrice: quote.regularMarketPrice,
-        marketCap: quote.marketCap,
-        sector: quote.sector,
-      })) || [];
+        yahooResults = response.data.quotes?.map((quote: any) => ({
+          symbol: quote.symbol,
+          name: quote.longname || quote.shortname || quote.symbol,
+          type: this.mapYahooTypeToAssetType(quote.typeDisp),
+          exchange: quote.exchange || 'Unknown',
+          currency: quote.currency || 'USD',
+          region: this.mapExchangeToRegion(quote.exchange),
+          currentPrice: quote.regularMarketPrice,
+          marketCap: quote.marketCap,
+          sector: quote.sector,
+        })) || [];
+      } catch (yahooError) {
+        console.warn('Yahoo Finance search failed:', yahooError);
+      }
+
+      // Search CoinGecko for crypto if query might be crypto-related
+      let cryptoResults: AssetSearchResult[] = [];
+      if (this.mightBeCrypto(query)) {
+        try {
+          const cryptoResponse = await axios.get('https://api.coingecko.com/api/v3/search', {
+            params: { query },
+            timeout: 5000,
+          });
+
+          cryptoResults = cryptoResponse.data.coins?.slice(0, 5).map((coin: any) => ({
+            symbol: `${coin.symbol.toUpperCase()}-USD`,
+            name: coin.name,
+            type: 'crypto' as const,
+            exchange: 'CoinGecko',
+            currency: 'USD',
+            region: 'GLOBAL' as const,
+            currentPrice: 0, // Would need separate price call
+            marketCap: coin.market_cap_rank,
+            sector: 'Cryptocurrency',
+          })) || [];
+        } catch (cryptoError) {
+          console.warn('CoinGecko search failed:', cryptoError);
+        }
+      }
 
       // Combine and deduplicate results
-      const combinedResults = [...popularResults, ...yahooResults];
+      const combinedResults = [...popularResults, ...yahooResults, ...cryptoResults];
       const uniqueResults = combinedResults.filter((asset, index, self) => 
         index === self.findIndex(a => a.symbol === asset.symbol)
       ).slice(0, limit);
@@ -140,6 +171,11 @@ class AssetSearchService {
     }
   }
 
+  private mightBeCrypto(query: string): boolean {
+    const cryptoKeywords = ['bitcoin', 'btc', 'ethereum', 'eth', 'crypto', 'coin', 'ada', 'cardano', 'solana', 'sol'];
+    return cryptoKeywords.some(keyword => query.toLowerCase().includes(keyword));
+  }
+
   /**
    * Get detailed information about a specific asset
    */
@@ -148,57 +184,65 @@ class AssetSearchService {
     const cached = this.getCachedData(cacheKey);
     if (cached) return cached;
 
+    return this.fetchWithFallback(
+      async () => {
+        const [quoteResponse, summaryResponse] = await Promise.all([
+          axios.get(`${this.YAHOO_FINANCE_API}/quote`, {
+            params: { symbols: symbol },
+            timeout: 5000,
+          }),
+          axios.get(`${this.YAHOO_FINANCE_API}/quoteSummary/${symbol}`, {
+            params: { modules: 'assetProfile,summaryDetail,price' },
+            timeout: 5000,
+          }).catch(() => null),
+        ]);
+
+        const quote = quoteResponse.data.quoteResponse?.result?.[0];
+        if (!quote) throw new Error('No quote data');
+
+        const summary = summaryResponse?.data.quoteSummary?.result?.[0];
+        const profile = summary?.assetProfile;
+        const summaryDetail = summary?.summaryDetail;
+
+        const assetDetails: AssetDetails = {
+          symbol: quote.symbol,
+          name: quote.longName || quote.shortName || quote.symbol,
+          type: this.mapYahooTypeToAssetType(quote.typeDisp),
+          exchange: quote.fullExchangeName || quote.exchange,
+          currency: quote.currency || 'USD',
+          region: this.mapExchangeToRegion(quote.exchange),
+          currentPrice: quote.regularMarketPrice,
+          previousClose: quote.regularMarketPreviousClose,
+          dayHigh: quote.regularMarketDayHigh,
+          dayLow: quote.regularMarketDayLow,
+          volume: quote.regularMarketVolume,
+          avgVolume: quote.averageDailyVolume3Month,
+          marketCap: quote.marketCap,
+          peRatio: quote.trailingPE,
+          dividendYield: quote.dividendYield,
+          beta: summaryDetail?.beta?.raw,
+          fiftyTwoWeekHigh: quote.fiftyTwoWeekHigh,
+          fiftyTwoWeekLow: quote.fiftyTwoWeekLow,
+          description: profile?.longBusinessSummary || `${quote.longName || quote.shortName} trading on ${quote.exchange}`,
+          sector: profile?.sector || quote.sector || 'Unknown',
+          industry: profile?.industry,
+          employees: profile?.fullTimeEmployees,
+          website: profile?.website,
+        };
+
+        this.setCachedData(cacheKey, assetDetails);
+        return assetDetails;
+      },
+      null
+    );
+  }
+
+  private async fetchWithFallback(primaryFetch: () => Promise<any>, fallbackData: any) {
     try {
-      const [quoteResponse, summaryResponse] = await Promise.all([
-        axios.get(`${this.YAHOO_FINANCE_API}/quote`, {
-          params: { symbols: symbol },
-          timeout: 5000,
-        }),
-        axios.get(`${this.YAHOO_FINANCE_API}/quoteSummary/${symbol}`, {
-          params: { modules: 'assetProfile,summaryDetail,price' },
-          timeout: 5000,
-        }).catch(() => null), // Summary might not be available for all assets
-      ]);
-
-      const quote = quoteResponse.data.quoteResponse?.result?.[0];
-      if (!quote) return null;
-
-      const summary = summaryResponse?.data.quoteSummary?.result?.[0];
-      const profile = summary?.assetProfile;
-      const summaryDetail = summary?.summaryDetail;
-
-      const assetDetails: AssetDetails = {
-        symbol: quote.symbol,
-        name: quote.longName || quote.shortName || quote.symbol,
-        type: this.mapYahooTypeToAssetType(quote.typeDisp),
-        exchange: quote.fullExchangeName || quote.exchange,
-        currency: quote.currency || 'USD',
-        region: this.mapExchangeToRegion(quote.exchange),
-        currentPrice: quote.regularMarketPrice,
-        previousClose: quote.regularMarketPreviousClose,
-        dayHigh: quote.regularMarketDayHigh,
-        dayLow: quote.regularMarketDayLow,
-        volume: quote.regularMarketVolume,
-        avgVolume: quote.averageDailyVolume3Month,
-        marketCap: quote.marketCap,
-        peRatio: quote.trailingPE,
-        dividendYield: quote.dividendYield,
-        beta: summaryDetail?.beta?.raw,
-        fiftyTwoWeekHigh: quote.fiftyTwoWeekHigh,
-        fiftyTwoWeekLow: quote.fiftyTwoWeekLow,
-        description: profile?.longBusinessSummary || `${quote.longName || quote.shortName} trading on ${quote.exchange}`,
-        sector: profile?.sector || quote.sector || 'Unknown',
-        industry: profile?.industry,
-        employees: profile?.fullTimeEmployees,
-        website: profile?.website,
-      };
-
-      this.setCachedData(cacheKey, assetDetails);
-      return assetDetails;
-
+      return await primaryFetch();
     } catch (error) {
-      console.error('Error fetching asset details:', error);
-      return null;
+      console.warn('Primary API failed, using fallback:', error);
+      return fallbackData;
     }
   }
 
@@ -206,18 +250,19 @@ class AssetSearchService {
    * Get current price for an asset
    */
   async getCurrentPrice(symbol: string): Promise<number | null> {
-    try {
-      const response = await axios.get(`${this.YAHOO_FINANCE_API}/quote`, {
-        params: { symbols: symbol },
-        timeout: 3000,
-      });
+    return this.fetchWithFallback(
+      async () => {
+        const response = await axios.get(`${this.YAHOO_FINANCE_API}/quote`, {
+          params: { symbols: symbol },
+          timeout: 3000,
+        });
 
-      const quote = response.data.quoteResponse?.result?.[0];
-      return quote?.regularMarketPrice || null;
-    } catch (error) {
-      console.error('Error fetching current price:', error);
-      return null;
-    }
+        const quote = response.data.quoteResponse?.result?.[0];
+        if (!quote) throw new Error('No price data');
+        return quote.regularMarketPrice;
+      },
+      null
+    );
   }
 
   /**
