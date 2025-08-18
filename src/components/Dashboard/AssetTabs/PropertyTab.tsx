@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Home, MapPin, TrendingUp, Calculator, Plus, Edit3, Trash2 } from 'lucide-react';
+import { Home, MapPin, TrendingUp, Calculator, Plus, Edit3, Trash2, Search, Building } from 'lucide-react';
 import { AssetHolding } from '../../../types/portfolio';
 import { UserProfile } from '../../../App';
+import { PropertyAssetModal } from '../../PropertyAssetModal';
+import { usePortfolio } from '../../../hooks/usePortfolio';
 
 interface PropertyTabProps {
   holdings: AssetHolding[];
@@ -9,16 +11,25 @@ interface PropertyTabProps {
 }
 
 export const PropertyTab: React.FC<PropertyTabProps> = ({ holdings, userProfile }) => {
+  const [showAddModal, setShowAddModal] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<AssetHolding | null>(null);
+  const { deleteHolding } = usePortfolio();
 
   const propertyHoldings = holdings.filter(h => h.type === 'property');
   const totalPropertyValue = propertyHoldings.reduce((sum, holding) => 
     sum + (holding.quantity * holding.currentPrice), 0
   );
 
+  const totalPropertyGain = propertyHoldings.reduce((sum, holding) => {
+    const currentValue = holding.quantity * holding.currentPrice;
+    const purchaseValue = holding.quantity * holding.purchasePrice;
+    return sum + (currentValue - purchaseValue);
+  }, 0);
+
   const propertyMetrics = {
     totalValue: totalPropertyValue,
-    averageGrowth: 6.2,
+    totalGain: totalPropertyGain,
+    averageGrowth: totalPropertyValue > 0 ? (totalPropertyGain / (totalPropertyValue - totalPropertyGain)) * 100 : 0,
     rentalYield: 4.1,
     capitalGrowth: 2.1
   };
@@ -41,6 +52,15 @@ export const PropertyTab: React.FC<PropertyTabProps> = ({ holdings, userProfile 
     }
   ];
 
+  const handleDeleteProperty = async (holdingId: string) => {
+    if (confirm('Are you sure you want to remove this property from your portfolio?')) {
+      const result = await deleteHolding(holdingId);
+      if (result.error) {
+        alert('Error removing property: ' + result.error);
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Property Summary */}
@@ -50,6 +70,9 @@ export const PropertyTab: React.FC<PropertyTabProps> = ({ holdings, userProfile 
             <div className="p-3 bg-orange-600 rounded-lg">
               <Home className="w-6 h-6 text-white" />
             </div>
+            <span className="text-sm font-medium text-orange-700">
+              {propertyHoldings.length} properties
+            </span>
           </div>
           <h3 className="text-2xl font-bold text-slate-900 mb-1">
             ${propertyMetrics.totalValue.toLocaleString()}
@@ -63,10 +86,12 @@ export const PropertyTab: React.FC<PropertyTabProps> = ({ holdings, userProfile 
               <TrendingUp className="w-6 h-6 text-white" />
             </div>
           </div>
-          <h3 className="text-2xl font-bold text-slate-900 mb-1">
-            {propertyMetrics.averageGrowth}%
+          <h3 className={`text-2xl font-bold mb-1 ${
+            propertyMetrics.totalGain >= 0 ? 'text-green-600' : 'text-red-600'
+          }`}>
+            {propertyMetrics.totalGain >= 0 ? '+' : ''}${propertyMetrics.totalGain.toLocaleString()}
           </h3>
-          <p className="text-sm text-green-700">Average Growth</p>
+          <p className="text-sm text-green-700">Capital Gain</p>
         </div>
 
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
@@ -78,7 +103,7 @@ export const PropertyTab: React.FC<PropertyTabProps> = ({ holdings, userProfile 
           <h3 className="text-2xl font-bold text-slate-900 mb-1">
             {propertyMetrics.rentalYield}%
           </h3>
-          <p className="text-sm text-blue-700">Rental Yield</p>
+          <p className="text-sm text-blue-700">Avg Rental Yield</p>
         </div>
 
         <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
@@ -88,9 +113,9 @@ export const PropertyTab: React.FC<PropertyTabProps> = ({ holdings, userProfile 
             </div>
           </div>
           <h3 className="text-2xl font-bold text-slate-900 mb-1">
-            {propertyMetrics.capitalGrowth}%
+            {propertyMetrics.averageGrowth.toFixed(1)}%
           </h3>
-          <p className="text-sm text-purple-700">Capital Growth</p>
+          <p className="text-sm text-purple-700">Total Return</p>
         </div>
       </div>
 
@@ -98,7 +123,10 @@ export const PropertyTab: React.FC<PropertyTabProps> = ({ holdings, userProfile 
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-slate-900">Property Holdings</h3>
-          <button className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+          >
             <Plus className="w-4 h-4" />
             <span>Add Property</span>
           </button>
@@ -113,16 +141,26 @@ export const PropertyTab: React.FC<PropertyTabProps> = ({ holdings, userProfile 
               const gainPercent = purchaseValue > 0 ? (gain / purchaseValue) * 100 : 0;
 
               return (
-                <div key={property.id} className="border border-slate-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
-                     onClick={() => setSelectedProperty(property)}>
+                <div key={property.id} className="border border-slate-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h4 className="font-bold text-slate-900">{property.name}</h4>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <MapPin className="w-4 h-4 text-slate-500" />
-                        <span className="text-sm text-slate-600">
-                          {property.metadata?.location || 'Location not specified'}
-                        </span>
+                    <div className="flex items-start space-x-3">
+                      <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <Home className="w-6 h-6 text-orange-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900">{property.name}</h4>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <MapPin className="w-4 h-4 text-slate-500" />
+                          <span className="text-sm text-slate-600">
+                            {property.metadata?.location || 'Location not specified'}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <Building className="w-4 h-4 text-slate-500" />
+                          <span className="text-sm text-slate-600">
+                            {property.metadata?.propertyType || 'Residential'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                     <div className="text-right">
@@ -137,7 +175,7 @@ export const PropertyTab: React.FC<PropertyTabProps> = ({ holdings, userProfile 
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-2 gap-4 text-sm mb-4">
                     <div>
                       <span className="text-slate-600">Purchase Price</span>
                       <p className="font-medium">${property.purchasePrice.toLocaleString()}</p>
@@ -147,21 +185,29 @@ export const PropertyTab: React.FC<PropertyTabProps> = ({ holdings, userProfile 
                       <p className="font-medium">${property.currentPrice.toLocaleString()}</p>
                     </div>
                     <div>
-                      <span className="text-slate-600">Property Type</span>
-                      <p className="font-medium">{property.metadata?.propertyType || 'Residential'}</p>
-                    </div>
-                    <div>
                       <span className="text-slate-600">Purchase Date</span>
                       <p className="font-medium">{new Date(property.purchaseDate).toLocaleDateString()}</p>
                     </div>
+                    <div>
+                      <span className="text-slate-600">Rental Income</span>
+                      <p className="font-medium">
+                        ${((property.metadata?.rentalIncome || 0) * 52).toLocaleString()}/year
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="flex space-x-2 mt-4 pt-4 border-t border-slate-200">
-                    <button className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors">
+                  <div className="flex space-x-2 pt-4 border-t border-slate-200">
+                    <button
+                      onClick={() => setSelectedProperty(property)}
+                      className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                    >
                       <Edit3 className="w-4 h-4" />
                       <span>Edit</span>
                     </button>
-                    <button className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors">
+                    <button
+                      onClick={() => handleDeleteProperty(property.id)}
+                      className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                    >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -173,7 +219,10 @@ export const PropertyTab: React.FC<PropertyTabProps> = ({ holdings, userProfile 
           <div className="text-center py-12 text-slate-500">
             <Home className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p className="mb-2">No property holdings found</p>
-            <button className="text-orange-600 hover:text-orange-700 font-medium">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="text-orange-600 hover:text-orange-700 font-medium"
+            >
               Add your first property investment
             </button>
           </div>
@@ -203,6 +252,13 @@ export const PropertyTab: React.FC<PropertyTabProps> = ({ holdings, userProfile 
           ))}
         </div>
       </div>
+
+      {/* Property Asset Modal */}
+      <PropertyAssetModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        userProfile={userProfile}
+      />
     </div>
   );
 };

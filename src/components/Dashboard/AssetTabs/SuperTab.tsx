@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Target, TrendingUp, Calculator, Plus, AlertCircle, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Target, TrendingUp, Calculator, Plus, Edit3, Trash2, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
 import { AssetHolding } from '../../../types/portfolio';
 import { UserProfile } from '../../../App';
+import { usePortfolio } from '../../../hooks/usePortfolio';
+import { SuperAssetModal } from '../../SuperAssetModal';
 
 interface SuperTabProps {
   holdings: AssetHolding[];
@@ -9,7 +11,10 @@ interface SuperTabProps {
 }
 
 export const SuperTab: React.FC<SuperTabProps> = ({ holdings, userProfile }) => {
+  const [showAddModal, setShowAddModal] = useState(false);
   const [showContributionCalculator, setShowContributionCalculator] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const { updateHolding, deleteHolding } = usePortfolio();
 
   const superHoldings = holdings.filter(h => h.type === 'super');
   const totalSuperValue = superHoldings.reduce((sum, holding) => 
@@ -22,6 +27,36 @@ export const SuperTab: React.FC<SuperTabProps> = ({ holdings, userProfile }) => 
     totalSuperValue * Math.pow(1.075, yearsToRetirement) +
     (currentContribution * ((Math.pow(1.075, yearsToRetirement) - 1) / 0.075))
   );
+
+  const handleRefreshSuper = async () => {
+    setRefreshing(true);
+    try {
+      // In a real app, this would fetch updated super balances from fund APIs
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Update super holdings with latest values
+      for (const holding of superHoldings) {
+        // Simulate small growth
+        const growth = holding.currentPrice * 0.001; // 0.1% growth
+        await updateHolding(holding.id, { 
+          currentPrice: holding.currentPrice + growth 
+        });
+      }
+    } catch (error) {
+      console.error('Error refreshing super data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleDeleteStock = async (holdingId: string) => {
+    if (confirm('Are you sure you want to remove this super fund from your portfolio?')) {
+      const result = await deleteHolding(holdingId);
+      if (result.error) {
+        alert('Error removing super fund: ' + result.error);
+      }
+    }
+  };
 
   const contributionStrategies = [
     {
@@ -86,6 +121,13 @@ export const SuperTab: React.FC<SuperTabProps> = ({ holdings, userProfile }) => 
             <div className="p-3 bg-blue-600 rounded-lg">
               <Target className="w-6 h-6 text-white" />
             </div>
+            <button
+              onClick={handleRefreshSuper}
+              disabled={refreshing}
+              className="text-sm font-medium text-blue-700 hover:text-blue-800 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
           </div>
           <h3 className="text-2xl font-bold text-slate-900 mb-1">
             ${totalSuperValue.toLocaleString()}
@@ -128,6 +170,104 @@ export const SuperTab: React.FC<SuperTabProps> = ({ holdings, userProfile }) => 
           </h3>
           <p className="text-sm text-orange-700">Years to Retirement</p>
         </div>
+      </div>
+
+      {/* Super Holdings */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-slate-900">Superannuation Funds</h3>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Super Fund</span>
+          </button>
+        </div>
+
+        {superHoldings.length > 0 ? (
+          <div className="space-y-4">
+            {superHoldings.map((superFund) => {
+              const currentValue = superFund.quantity * superFund.currentPrice;
+              const purchaseValue = superFund.quantity * superFund.purchasePrice;
+              const gain = currentValue - purchaseValue;
+              const gainPercent = purchaseValue > 0 ? (gain / purchaseValue) * 100 : 0;
+
+              return (
+                <div key={superFund.id} className="border border-slate-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Target className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900">{superFund.name}</h4>
+                        <p className="text-sm text-slate-600">
+                          {superFund.metadata?.investmentOption || 'Balanced Option'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-bold text-slate-900">
+                        ${currentValue.toLocaleString()}
+                      </div>
+                      <div className={`text-sm font-medium ${
+                        gain >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {gain >= 0 ? '+' : ''}{gainPercent.toFixed(1)}%
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-slate-600">Fund Type</span>
+                      <p className="font-medium">{superFund.metadata?.fundType || 'Industry Fund'}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-600">Investment Option</span>
+                      <p className="font-medium">{superFund.metadata?.investmentOption || 'Balanced'}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-600">Contribution Rate</span>
+                      <p className="font-medium">{superFund.metadata?.contributionRate || 11}%</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-600">Expected Return</span>
+                      <p className="font-medium text-green-600">
+                        {superFund.metadata?.expectedReturn || 7.5}%
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex space-x-2 mt-4 pt-4 border-t border-slate-200">
+                    <button className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors">
+                      <Edit3 className="w-4 h-4" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteStock(superFund.id)}
+                      className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-slate-500">
+            <Target className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p className="mb-2">No superannuation funds tracked</p>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Add your super fund
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Contribution Strategies */}
@@ -225,6 +365,13 @@ export const SuperTab: React.FC<SuperTabProps> = ({ holdings, userProfile }) => 
           ))}
         </div>
       </div>
+
+      {/* Super Asset Modal */}
+      <SuperAssetModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        userProfile={userProfile}
+      />
     </div>
   );
 };

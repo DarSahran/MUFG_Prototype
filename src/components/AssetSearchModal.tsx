@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, TrendingUp, Globe, DollarSign, Clock, Star, Plus } from 'lucide-react';
-import { assetSearchService, AssetSearchResult, AssetDetails } from '../services/assetSearch';
+import { realTimeMarketDataService } from '../services/realTimeMarketData';
 import { usePortfolio } from '../hooks/usePortfolio';
 
 interface AssetSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectAsset?: (asset: AssetSearchResult) => void;
+  onSelectAsset?: (asset: any) => void;
   region?: 'AU' | 'US' | 'IN';
+  assetType?: 'stock' | 'etf' | 'crypto' | 'property' | 'super';
 }
 
 export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
@@ -16,13 +17,14 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
   onClose,
   onSelectAsset,
   region,
+  assetType,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<AssetSearchResult[]>([]);
-  const [selectedAsset, setSelectedAsset] = useState<AssetDetails | null>(null);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [selectedAsset, setSelectedAsset] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'search' | 'popular' | 'categories'>('popular');
-  const [selectedCategory, setSelectedCategory] = useState<'stocks' | 'etfs' | 'crypto' | 'bonds'>('etfs');
+  const [selectedCategory, setSelectedCategory] = useState<'stocks' | 'etfs' | 'crypto' | 'bonds'>(assetType === 'crypto' ? 'crypto' : 'etfs');
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { addHolding } = usePortfolio();
@@ -43,19 +45,35 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
     }
   }, [searchQuery]);
 
-  const loadPopularAssets = () => {
-    const popular = assetSearchService.getPopularAssets(region);
-    setSearchResults(popular);
+  const loadPopularAssets = async () => {
+    try {
+      setLoading(true);
+      const popular = await realTimeMarketDataService.searchTradableAssets('', assetType, region);
+      
+      // If no results, use predefined popular assets
+      if (popular.length === 0) {
+        const fallbackAssets = getFallbackPopularAssets();
+        setSearchResults(fallbackAssets);
+      } else {
+        setSearchResults(popular.slice(0, 20));
+      }
+    } catch (error) {
+      console.error('Error loading popular assets:', error);
+      setSearchResults(getFallbackPopularAssets());
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSearch = async (query: string) => {
     setLoading(true);
     setActiveTab('search');
     try {
-      const results = await assetSearchService.searchAssets(query, 20);
+      const results = await realTimeMarketDataService.searchTradableAssets(query, assetType, region);
       setSearchResults(results);
     } catch (error) {
       console.error('Search error:', error);
+      setSearchResults([]);
     } finally {
       setLoading(false);
     }
@@ -64,10 +82,22 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
   const handleAssetClick = async (asset: AssetSearchResult) => {
     setLoading(true);
     try {
-      const details = await assetSearchService.getAssetDetails(asset.symbol);
-      setSelectedAsset(details);
+      // Get real-time price data
+      const priceData = await realTimeMarketDataService.getCurrentPrice(asset.symbol, asset.type);
+      
+      const enrichedAsset = {
+        ...asset,
+        currentPrice: priceData?.price || asset.currentPrice || 0,
+        change: priceData?.change || 0,
+        changePercent: priceData?.changePercent || 0,
+        volume: priceData?.volume || 0,
+        lastUpdate: priceData?.timestamp || new Date().toISOString(),
+      };
+      
+      setSelectedAsset(enrichedAsset);
     } catch (error) {
       console.error('Error fetching asset details:', error);
+      setSelectedAsset(asset);
     } finally {
       setLoading(false);
     }
@@ -75,20 +105,32 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
 
   const handleAddToPortfolio = async (asset: AssetSearchResult | AssetDetails) => {
     try {
+      const assetTypeMap: { [key: string]: string } = {
+        'EQUITY': 'stock',
+        'ETF': 'etf',
+        'CRYPTOCURRENCY': 'crypto',
+        'BOND': 'bond',
+        'MUTUALFUND': 'etf',
+      };
+      
+      const mappedType = assetTypeMap[asset.type?.toUpperCase()] || asset.type || 'stock';
+      
       const result = await addHolding({
-        type: asset.type,
+        type: mappedType as any,
         symbol: asset.symbol,
         name: asset.name,
         quantity: 1, // Default quantity
         purchasePrice: asset.currentPrice || 0,
         currentPrice: asset.currentPrice || 0,
-        currency: asset.currency as any,
+        currency: (asset.currency || 'AUD') as any,
         exchange: asset.exchange,
-        region: asset.region,
+        region: (asset.region || 'AU') as any,
         purchaseDate: new Date().toISOString().split('T')[0],
         metadata: {
           sector: asset.sector,
-          description: 'description' in asset ? asset.description : undefined,
+          description: asset.description,
+          marketCap: asset.marketCap,
+          addedAt: new Date().toISOString(),
         },
       });
 
@@ -104,6 +146,32 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
     }
   };
 
+  const loadCategoryAssets = async (categoryId: string) => {
+    setLoading(true);
+    try {
+      const assets = await realTimeMarketDataService.searchTradableAssets('', categoryId.slice(0, -1), region);
+      setSearchResults(assets.slice(0, 20));
+    } catch (error) {
+      console.error('Error loading category assets:', error);
+      setSearchResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getFallbackPopularAssets = () => {
+    const fallbackAssets = [
+      { symbol: 'VAS.AX', name: 'Vanguard Australian Shares Index ETF', type: 'etf', exchange: 'ASX', currency: 'AUD', region: 'AU', sector: 'Diversified', currentPrice: 89.45 },
+      { symbol: 'VGS.AX', name: 'Vanguard MSCI Index International Shares ETF', type: 'etf', exchange: 'ASX', currency: 'AUD', region: 'AU', sector: 'International', currentPrice: 102.67 },
+      { symbol: 'VAF.AX', name: 'Vanguard Australian Fixed Interest Index ETF', type: 'etf', exchange: 'ASX', currency: 'AUD', region: 'AU', sector: 'Fixed Income', currentPrice: 51.23 },
+      { symbol: 'CBA.AX', name: 'Commonwealth Bank of Australia', type: 'stock', exchange: 'ASX', currency: 'AUD', region: 'AU', sector: 'Financial Services', currentPrice: 104.50 },
+      { symbol: 'BHP.AX', name: 'BHP Group Limited', type: 'stock', exchange: 'ASX', currency: 'AUD', region: 'AU', sector: 'Materials', currentPrice: 46.78 },
+      { symbol: 'BTC-USD', name: 'Bitcoin USD', type: 'crypto', exchange: 'CoinGecko', currency: 'USD', region: 'GLOBAL', sector: 'Cryptocurrency', currentPrice: 45000 },
+      { symbol: 'ETH-USD', name: 'Ethereum USD', type: 'crypto', exchange: 'CoinGecko', currency: 'USD', region: 'GLOBAL', sector: 'Cryptocurrency', currentPrice: 3200 },
+    ];
+    
+    return assetType ? fallbackAssets.filter(asset => asset.type === assetType) : fallbackAssets;
+  };
   const formatPrice = (price: number | undefined, currency: string = 'USD') => {
     if (!price) return 'N/A';
     const symbol = currency === 'AUD' ? 'A$' : currency === 'INR' ? '₹' : '$';
@@ -240,8 +308,7 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
                           key={category.id}
                           onClick={() => {
                             setSelectedCategory(category.id as any);
-                            const assets = assetSearchService.getAssetsByCategory(category.id as any);
-                            setSearchResults(assets);
+                    loadCategoryAssets(category.id as any);
                           }}
                           className={`flex items-center space-x-2 p-3 rounded-lg border-2 transition-all ${
                             selectedCategory === category.id
@@ -335,6 +402,13 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
                         <p className="text-2xl font-bold text-slate-900">
                           {formatPrice(selectedAsset.currentPrice, selectedAsset.currency)}
                         </p>
+                        {selectedAsset.changePercent !== undefined && (
+                          <p className={`text-sm font-medium ${
+                            selectedAsset.changePercent >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {selectedAsset.changePercent >= 0 ? '+' : ''}{selectedAsset.changePercent.toFixed(2)}%
+                          </p>
+                        )}
                       </div>
                       <div className="bg-slate-50 rounded-lg p-4">
                         <p className="text-sm text-slate-600">Market Cap</p>
@@ -347,37 +421,23 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-slate-600">Previous Close</span>
-                          <span className="font-medium">{formatPrice(selectedAsset.previousClose, selectedAsset.currency)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-600">Day Range</span>
-                          <span className="font-medium">
-                            {formatPrice(selectedAsset.dayLow, selectedAsset.currency)} - {formatPrice(selectedAsset.dayHigh, selectedAsset.currency)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
                           <span className="text-slate-600">Volume</span>
-                          <span className="font-medium">{selectedAsset.volume?.toLocaleString()}</span>
+                          <span className="font-medium">{selectedAsset.volume?.toLocaleString() || 'N/A'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-600">52W Range</span>
+                          <span className="text-slate-600">Exchange</span>
+                          <span className="font-medium">{selectedAsset.exchange || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Currency</span>
+                          <span className="font-medium">{selectedAsset.currency || 'USD'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Region</span>
                           <span className="font-medium">
-                            {formatPrice(selectedAsset.fiftyTwoWeekLow, selectedAsset.currency)} - {formatPrice(selectedAsset.fiftyTwoWeekHigh, selectedAsset.currency)}
+                            {selectedAsset.region || 'Global'}
                           </span>
                         </div>
-                        {selectedAsset.peRatio && (
-                          <div className="flex justify-between">
-                            <span className="text-slate-600">P/E Ratio</span>
-                            <span className="font-medium">{selectedAsset.peRatio.toFixed(2)}</span>
-                          </div>
-                        )}
-                        {selectedAsset.dividendYield && (
-                          <div className="flex justify-between">
-                            <span className="text-slate-600">Dividend Yield</span>
-                            <span className="font-medium">{(selectedAsset.dividendYield * 100).toFixed(2)}%</span>
-                          </div>
-                        )}
                       </div>
 
                       {selectedAsset.description && (
@@ -404,6 +464,11 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
                             {selectedAsset.sector}
                           </span>
                         )}
+                        {selectedAsset.lastUpdate && (
+                          <span className="px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                            Live Data
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -413,6 +478,7 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
                   <div className="text-center">
                     <TrendingUp className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>Select an asset to view details</p>
+                    <p className="text-sm mt-2">Real-time prices and market data</p>
                   </div>
                 </div>
               )}

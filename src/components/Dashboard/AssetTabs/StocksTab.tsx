@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
-import { TrendingUp, TrendingDown, Plus, Edit3, Trash2, BarChart3 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { TrendingUp, TrendingDown, Plus, Edit3, Trash2, BarChart3, Search, RefreshCw, Eye } from 'lucide-react';
 import { AssetHolding } from '../../../types/portfolio';
 import { UserProfile } from '../../../App';
+import { AssetSearchModal } from '../../AssetSearchModal';
+import { usePortfolio } from '../../../hooks/usePortfolio';
+import { useRealTimeData } from '../../../hooks/useRealTimeData';
+import { realTimeMarketDataService } from '../../../services/realTimeMarketData';
 
 interface StocksTabProps {
   holdings: AssetHolding[];
@@ -10,9 +14,58 @@ interface StocksTabProps {
 
 export const StocksTab: React.FC<StocksTabProps> = ({ holdings, userProfile }) => {
   const [sortBy, setSortBy] = useState<'value' | 'gain' | 'name'>('value');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingStock, setEditingStock] = useState<AssetHolding | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const { updateHolding, deleteHolding } = usePortfolio();
 
   const stockHoldings = holdings.filter(h => h.type === 'stock');
+  const stockSymbols = stockHoldings.map(h => h.symbol).filter(Boolean) as string[];
   
+  // Real-time price updates
+  const { prices, lastUpdate, refreshPrices } = useRealTimeData({
+    symbols: stockSymbols,
+    interval: 30000, // 30 seconds
+    enabled: stockSymbols.length > 0,
+    assetTypes: Object.fromEntries(stockHoldings.map(h => [h.symbol!, 'stock'])),
+    regions: Object.fromEntries(stockHoldings.map(h => [h.symbol!, h.region])),
+  });
+
+  // Update current prices when real-time data changes
+  useEffect(() => {
+    if (Object.keys(prices).length > 0) {
+      stockHoldings.forEach(holding => {
+        if (holding.symbol && prices[holding.symbol]) {
+          const newPrice = prices[holding.symbol].price;
+          if (newPrice !== holding.currentPrice) {
+            updateHolding(holding.id, { currentPrice: newPrice });
+          }
+        }
+      });
+    }
+  }, [prices]);
+
+  const handleRefreshPrices = async () => {
+    setRefreshing(true);
+    try {
+      await refreshPrices();
+      
+      // Also update prices from market data service
+      for (const holding of stockHoldings) {
+        if (holding.symbol) {
+          const quote = await realTimeMarketDataService.getCurrentPrice(holding.symbol, 'stock');
+          if (quote) {
+            await updateHolding(holding.id, { currentPrice: quote.price });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing prices:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const sortedHoldings = [...stockHoldings].sort((a, b) => {
     switch (sortBy) {
       case 'value':
@@ -38,34 +91,21 @@ export const StocksTab: React.FC<StocksTabProps> = ({ holdings, userProfile }) =
     return sum + (currentValue - purchaseValue);
   }, 0);
 
-  const stockRecommendations = [
-    {
-      symbol: 'CBA.AX',
-      name: 'Commonwealth Bank',
-      reason: 'Strong dividend yield and stable performance',
-      confidence: 85,
-      targetPrice: 105.50,
-    },
-    {
-      symbol: 'CSL.AX',
-      name: 'CSL Limited',
-      reason: 'Healthcare sector growth and international expansion',
-      confidence: 78,
-      targetPrice: 285.00,
-    },
-    {
-      symbol: 'BHP.AX',
-      name: 'BHP Group',
-      reason: 'Commodity exposure and dividend sustainability',
-      confidence: 72,
-      targetPrice: 48.50,
-    },
-  ];
+  const totalGainPercent = totalStockValue > 0 ? (totalStockGain / (totalStockValue - totalStockGain)) * 100 : 0;
+
+  const handleDeleteStock = async (holdingId: string) => {
+    if (confirm('Are you sure you want to remove this stock from your portfolio?')) {
+      const result = await deleteHolding(holdingId);
+      if (result.error) {
+        alert('Error removing stock: ' + result.error);
+      }
+    }
+  };
 
   return (
     <div className="space-y-6">
       {/* Stock Portfolio Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-blue-600 rounded-lg">
@@ -110,11 +150,32 @@ export const StocksTab: React.FC<StocksTabProps> = ({ holdings, userProfile }) =
               <TrendingUp className="w-6 h-6 text-white" />
             </div>
             <span className="text-sm font-medium text-purple-700">
-              Annual
+              {totalGainPercent >= 0 ? '+' : ''}{totalGainPercent.toFixed(1)}%
             </span>
           </div>
-          <h3 className="text-2xl font-bold text-slate-900 mb-1">8.2%</h3>
-          <p className="text-sm text-purple-700">Expected Return</p>
+          <h3 className="text-2xl font-bold text-slate-900 mb-1">
+            {totalGainPercent >= 0 ? '+' : ''}{totalGainPercent.toFixed(1)}%
+          </h3>
+          <p className="text-sm text-purple-700">Total Return</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-orange-600 rounded-lg">
+              <RefreshCw className={`w-6 h-6 text-white ${refreshing ? 'animate-spin' : ''}`} />
+            </div>
+            <button
+              onClick={handleRefreshPrices}
+              disabled={refreshing}
+              className="text-sm font-medium text-orange-700 hover:text-orange-800 disabled:opacity-50"
+            >
+              {refreshing ? 'Updating...' : 'Refresh'}
+            </button>
+          </div>
+          <h3 className="text-2xl font-bold text-slate-900 mb-1">Live</h3>
+          <p className="text-sm text-orange-700">
+            {lastUpdate ? `Updated ${new Date(lastUpdate).toLocaleTimeString()}` : 'Real-time Prices'}
+          </p>
         </div>
       </div>
 
@@ -133,7 +194,10 @@ export const StocksTab: React.FC<StocksTabProps> = ({ holdings, userProfile }) =
                 <option value="gain">Sort by Gain/Loss</option>
                 <option value="name">Sort by Name</option>
               </select>
-              <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
                 <Plus className="w-4 h-4" />
                 <span>Add Stock</span>
               </button>
@@ -161,18 +225,38 @@ export const StocksTab: React.FC<StocksTabProps> = ({ holdings, userProfile }) =
                   const purchaseValue = holding.quantity * holding.purchasePrice;
                   const gain = currentValue - purchaseValue;
                   const gainPercent = purchaseValue > 0 ? (gain / purchaseValue) * 100 : 0;
+                  const realTimePrice = holding.symbol ? prices[holding.symbol]?.price : null;
+                  const priceChanged = realTimePrice && realTimePrice !== holding.currentPrice;
 
                   return (
                     <tr key={holding.id} className="hover:bg-slate-50">
                       <td className="px-6 py-4">
                         <div>
-                          <div className="font-medium text-slate-900">{holding.symbol}</div>
-                          <div className="text-sm text-slate-500">{holding.name}</div>
+                          <div className="font-medium text-slate-900 flex items-center space-x-2">
+                            <span>{holding.symbol}</span>
+                            {priceChanged && (
+                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            )}
+                          </div>
+                          <div className="text-sm text-slate-500 truncate max-w-48">{holding.name}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-slate-900">{holding.quantity}</td>
                       <td className="px-6 py-4 text-slate-900">${holding.purchasePrice.toFixed(2)}</td>
-                      <td className="px-6 py-4 text-slate-900">${holding.currentPrice.toFixed(2)}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-slate-900">${holding.currentPrice.toFixed(2)}</span>
+                          {realTimePrice && (
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              realTimePrice > holding.currentPrice ? 'bg-green-100 text-green-700' :
+                              realTimePrice < holding.currentPrice ? 'bg-red-100 text-red-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              ${realTimePrice.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-6 py-4 font-medium text-slate-900">${currentValue.toLocaleString()}</td>
                       <td className="px-6 py-4">
                         <div className={`font-medium ${gain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -184,10 +268,18 @@ export const StocksTab: React.FC<StocksTabProps> = ({ holdings, userProfile }) =
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex space-x-2">
-                          <button className="p-1 text-blue-600 hover:text-blue-800">
+                          <button
+                            onClick={() => setEditingStock(holding)}
+                            className="p-1 text-blue-600 hover:text-blue-800"
+                            title="Edit holding"
+                          >
                             <Edit3 className="w-4 h-4" />
                           </button>
-                          <button className="p-1 text-red-600 hover:text-red-800">
+                          <button
+                            onClick={() => handleDeleteStock(holding.id)}
+                            className="p-1 text-red-600 hover:text-red-800"
+                            title="Remove holding"
+                          >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -202,40 +294,89 @@ export const StocksTab: React.FC<StocksTabProps> = ({ holdings, userProfile }) =
           <div className="p-12 text-center text-slate-500">
             <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p className="mb-2">No stock holdings found</p>
-            <button className="text-blue-600 hover:text-blue-700 font-medium">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="text-blue-600 hover:text-blue-700 font-medium"
+            >
               Add your first stock
             </button>
           </div>
         )}
       </div>
 
-      {/* Stock Recommendations */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-6">AI Stock Recommendations</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {stockRecommendations.map((rec, index) => (
-            <div key={rec.symbol} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h4 className="font-bold text-slate-900">{rec.symbol}</h4>
-                  <p className="text-sm text-slate-600">{rec.name}</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-bold text-green-600">{rec.confidence}%</div>
-                  <div className="text-xs text-slate-500">Confidence</div>
-                </div>
-              </div>
-              <p className="text-sm text-slate-700 mb-3">{rec.reason}</p>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-600">Target: ${rec.targetPrice}</span>
-                <button className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors">
-                  Add to Portfolio
-                </button>
-              </div>
+      {/* Real-time Market Data */}
+      {stockHoldings.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-slate-900">Live Market Data</h3>
+            <div className="flex items-center space-x-2 text-sm text-slate-600">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span>Live Updates</span>
+              {lastUpdate && (
+                <span className="text-xs">
+                  Last: {new Date(lastUpdate).toLocaleTimeString()}
+                </span>
+              )}
             </div>
-          ))}
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {stockHoldings.slice(0, 6).map((holding) => {
+              const realTimeData = holding.symbol ? prices[holding.symbol] : null;
+              const currentValue = holding.quantity * holding.currentPrice;
+              
+              return (
+                <div key={holding.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="font-bold text-slate-900">{holding.symbol}</h4>
+                      <p className="text-sm text-slate-600 truncate">{holding.name}</p>
+                    </div>
+                    {realTimeData && (
+                      <div className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        realTimeData.changePercent >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {realTimeData.changePercent >= 0 ? '+' : ''}{realTimeData.changePercent.toFixed(2)}%
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Current Price</span>
+                      <span className="font-medium">
+                        ${realTimeData?.price.toFixed(2) || holding.currentPrice.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Holdings Value</span>
+                      <span className="font-medium">${currentValue.toLocaleString()}</span>
+                    </div>
+                    {realTimeData && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Volume</span>
+                        <span className="font-medium">
+                          {realTimeData.volume >= 1000000 
+                            ? `${(realTimeData.volume / 1000000).toFixed(1)}M` 
+                            : `${(realTimeData.volume / 1000).toFixed(0)}K`
+                          }
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Asset Search Modal */}
+      <AssetSearchModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        region={userProfile.region as any}
+      />
     </div>
   );
 };
