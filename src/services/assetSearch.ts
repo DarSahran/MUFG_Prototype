@@ -328,7 +328,23 @@ class AssetSearchService {
   }
 
   // Debounced search for real-time search as user types
-  debouncedSearch = debounce(this.searchAssets.bind(this), 300);
+  debouncedSearch = debounce(async (query: string, limit: number = 10) => {
+    return await this.searchAssets(query, limit);
+  }, 300);
+
+  /**
+   * Get assets by category
+   */
+  getAssetsByCategory(category: 'stocks' | 'etfs' | 'crypto' | 'bonds'): AssetSearchResult[] {
+    const typeMap = {
+      stocks: 'stock',
+      etfs: 'etf',
+      crypto: 'crypto',
+      bonds: 'bond',
+    };
+    
+    return this.popularAssets.filter(asset => asset.type === typeMap[category]);
+  }
 }
 
 export const assetSearchService = new AssetSearchService();

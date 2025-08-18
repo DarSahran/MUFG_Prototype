@@ -5,7 +5,7 @@ import { UserProfile } from '../../../App';
 import { AssetSearchModal } from '../../AssetSearchModal';
 import { usePortfolio } from '../../../hooks/usePortfolio';
 import { useRealTimeData } from '../../../hooks/useRealTimeData';
-import { marketDataService } from '../../../services/marketData';
+import { realTimeMarketDataService } from '../../../services/realTimeMarketData';
 
 interface StocksTabProps {
   holdings: AssetHolding[];
@@ -53,7 +53,7 @@ export const StocksTab: React.FC<StocksTabProps> = ({ holdings, userProfile }) =
       // Also update prices from market data service
       for (const holding of stockHoldings) {
         if (holding.symbol) {
-          const quote = await marketDataService.getStockQuote(holding.symbol);
+          const quote = await realTimeMarketDataService.getCurrentPrice(holding.symbol, 'stock');
           if (quote) {
             await updateHolding(holding.id, { currentPrice: quote.price });
           }

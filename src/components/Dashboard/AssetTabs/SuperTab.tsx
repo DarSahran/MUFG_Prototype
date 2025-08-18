@@ -49,6 +49,15 @@ export const SuperTab: React.FC<SuperTabProps> = ({ holdings, userProfile }) => 
     }
   };
 
+  const handleDeleteStock = async (holdingId: string) => {
+    if (confirm('Are you sure you want to remove this super fund from your portfolio?')) {
+      const result = await deleteHolding(holdingId);
+      if (result.error) {
+        alert('Error removing super fund: ' + result.error);
+      }
+    }
+  };
+
   const contributionStrategies = [
     {
       title: 'Salary Sacrifice',

@@ -45,7 +45,7 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
     }
   }, [searchQuery]);
 
-  const loadPopularAssets = () => {
+  const loadPopularAssets = async () => {
     try {
       setLoading(true);
       const popular = await realTimeMarketDataService.searchTradableAssets('', assetType, region);
@@ -143,6 +143,19 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
     } catch (error) {
       console.error('Error adding to portfolio:', error);
       alert('Error adding to portfolio');
+    }
+  };
+
+  const loadCategoryAssets = async (categoryId: string) => {
+    setLoading(true);
+    try {
+      const assets = await realTimeMarketDataService.searchTradableAssets('', categoryId.slice(0, -1), region);
+      setSearchResults(assets.slice(0, 20));
+    } catch (error) {
+      console.error('Error loading category assets:', error);
+      setSearchResults([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -295,19 +308,7 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
                           key={category.id}
                           onClick={() => {
                             setSelectedCategory(category.id as any);
-                            const assets = assetSearchService.getAssetsByCategory(category.id as any);
-                            setSelectedCategory(category.id as any);
-                            setLoading(true);
-                            try {
-                              const assets = await realTimeMarketDataService.searchTradableAssets('', category.id.slice(0, -1), region);
-                              setSearchResults(assets.slice(0, 20));
-                            } catch (error) {
-                              console.error('Error loading category assets:', error);
-                              setSearchResults([]);
-                            } finally {
-                              setLoading(false);
-                            }
-                            setSearchResults(assets);
+                    loadCategoryAssets(category.id as any);
                           }}
                           className={`flex items-center space-x-2 p-3 rounded-lg border-2 transition-all ${
                             selectedCategory === category.id
