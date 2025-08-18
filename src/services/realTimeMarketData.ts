@@ -554,5 +554,3 @@ if (typeof window !== 'undefined') {
     realTimeMarketDataService.destroy();
   });
 }
-
-export { realTimeMarketDataService }
