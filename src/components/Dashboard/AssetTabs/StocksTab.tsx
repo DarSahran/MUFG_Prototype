@@ -53,7 +53,7 @@ export const StocksTab: React.FC<StocksTabProps> = ({ holdings, userProfile }) =
       // Also update prices from market data service
       for (const holding of stockHoldings) {
         if (holding.symbol) {
-          const quote = await realTimeMarketDataService.getCurrentPrice(holding.symbol, 'stock');
+          const quote = await realTimeMarketDataService.getCurrentPrice(holding.symbol, holding.type);
           if (quote) {
             await updateHolding(holding.id, { currentPrice: quote.price });
           }

@@ -389,7 +389,7 @@ class RealTimeMarketDataService {
   /**
    * Search for tradeable assets
    */
-  async searchTradableAssets(query: string, assetType?: string, region?: string): Promise<any[]> {
+  async searchTradableAssets(query: string, assetType: string = '', region: string = 'AU'): Promise<any[]> {
     if (!query || query.length < 2) return [];
 
     try {

@@ -29,26 +29,47 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { addHolding } = usePortfolio();
 
+  // Define interfaces
+  interface AssetSearchResult {
+    symbol: string;
+    name: string;
+    type: string;
+    exchange: string;
+    currency: string;
+    region: string;
+    currentPrice?: number;
+    marketCap?: number;
+    sector?: string;
+    description?: string;
+  }
+
+  interface AssetDetails extends AssetSearchResult {
+    change?: number;
+    changePercent?: number;
+    volume?: number;
+    lastUpdate?: string;
+  }
+
   useEffect(() => {
     if (isOpen) {
       searchInputRef.current?.focus();
-      loadPopularAssets();
+      void loadPopularAssets();
     }
   }, [isOpen]);
 
   useEffect(() => {
     if (searchQuery.length >= 2) {
-      handleSearch(searchQuery);
+      void handleSearch(searchQuery);
     } else {
       setSearchResults([]);
       setActiveTab('popular');
     }
   }, [searchQuery]);
 
-  const loadPopularAssets = async () => {
+  const loadPopularAssets = async (): Promise<void> => {
     try {
       setLoading(true);
-      const popular = await realTimeMarketDataService.searchTradableAssets('', assetType, region);
+      const popular = await realTimeMarketDataService.searchTradableAssets('', assetType || '', region || 'AU');
       
       // If no results, use predefined popular assets
       if (popular.length === 0) {
@@ -65,11 +86,11 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
     }
   };
 
-  const handleSearch = async (query: string) => {
+  const handleSearch = async (query: string): Promise<void> => {
     setLoading(true);
     setActiveTab('search');
     try {
-      const results = await realTimeMarketDataService.searchTradableAssets(query, assetType, region);
+      const results = await realTimeMarketDataService.searchTradableAssets(query, assetType || '', region || 'AU');
       setSearchResults(results);
     } catch (error) {
       console.error('Search error:', error);
@@ -79,11 +100,11 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
     }
   };
 
-  const handleAssetClick = async (asset: AssetSearchResult) => {
+  const handleAssetClick = async (asset: AssetSearchResult): Promise<void> => {
     setLoading(true);
     try {
       // Get real-time price data
-      const priceData = await realTimeMarketDataService.getCurrentPrice(asset.symbol, asset.type);
+      const priceData = await realTimeMarketDataService.getCurrentPrice(asset.symbol, asset.type || 'stock');
       
       const enrichedAsset = {
         ...asset,
@@ -103,7 +124,7 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
     }
   };
 
-  const handleAddToPortfolio = async (asset: AssetSearchResult | AssetDetails) => {
+  const handleAddToPortfolio = async (asset: AssetSearchResult | AssetDetails): Promise<void> => {
     try {
       const assetTypeMap: { [key: string]: string } = {
         'EQUITY': 'stock',
@@ -146,10 +167,10 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
     }
   };
 
-  const loadCategoryAssets = async (categoryId: string) => {
+  const loadCategoryAssets = async (categoryId: string): Promise<void> => {
     setLoading(true);
     try {
-      const assets = await realTimeMarketDataService.searchTradableAssets('', categoryId.slice(0, -1), region);
+      const assets = await realTimeMarketDataService.searchTradableAssets('', categoryId.slice(0, -1), region || 'AU');
       setSearchResults(assets.slice(0, 20));
     } catch (error) {
       console.error('Error loading category assets:', error);
@@ -159,7 +180,7 @@ export const AssetSearchModal: React.FC<AssetSearchModalProps> = ({
     }
   };
 
-  const getFallbackPopularAssets = () => {
+  const getFallbackPopularAssets = (): AssetSearchResult[] => {
     const fallbackAssets = [
       { symbol: 'VAS.AX', name: 'Vanguard Australian Shares Index ETF', type: 'etf', exchange: 'ASX', currency: 'AUD', region: 'AU', sector: 'Diversified', currentPrice: 89.45 },
       { symbol: 'VGS.AX', name: 'Vanguard MSCI Index International Shares ETF', type: 'etf', exchange: 'ASX', currency: 'AUD', region: 'AU', sector: 'International', currentPrice: 102.67 },
