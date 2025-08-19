@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Clock, BookOpen, Brain, CheckCircle, RotateCcw, Award, TrendingUp } from 'lucide-react';
+import { X, Clock, BookOpen, Brain, CheckCircle, RotateCcw, Award, TrendingUp, Star } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useEducationProgress } from '../../hooks/useEducationProgress';
