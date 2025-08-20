@@ -17,6 +17,9 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, use
   // Get real-time portfolio value
   const totalPortfolioValue = getTotalPortfolioValue();
 
+  // Default to dashboard if currentView is empty or undefined
+  const effectiveView = currentView || 'dashboard';
+
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'combined-ai', label: 'AI Advisor', icon: Bot },
@@ -48,94 +51,108 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, use
     <>
       <header className="fixed top-0 left-0 right-0 w-full bg-white/95 backdrop-blur-sm border-b border-slate-200 z-50 shadow-sm">
         <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo & Title */}
-            <div 
-              className="flex items-center gap-2 sm:gap-3 cursor-pointer select-none min-w-0 flex-shrink-0 hover:opacity-80 transition-opacity" 
-              onClick={() => setCurrentView('dashboard')} 
-              title="Go to Dashboard"
-            >
-              <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-600 to-green-600 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </div>
-              <div className="flex flex-col min-w-0 hidden xs:flex">
-                <span className="text-sm sm:text-base lg:text-lg font-bold text-slate-900 leading-tight truncate">
-                  SuperAI Advisor
-                </span>
-                <span className="text-[10px] sm:text-xs text-slate-500 truncate">
-                  Your AI Investment Guide
-                </span>
+          <div className="grid grid-cols-5 items-center h-16 w-full gap-2">
+            {/* 1. Website Name/Logo */}
+            <div className="flex items-center min-w-0 justify-start">
+              <div className="flex items-center gap-2 sm:gap-3 cursor-pointer select-none flex-shrink-0 hover:opacity-80 transition-opacity"
+                onClick={() => setCurrentView('dashboard')}
+                title="Go to Dashboard"
+              >
+                <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-600 to-green-600 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                  <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+                <div className="flex flex-col min-w-0 hidden xs:flex">
+                  <span className="text-sm sm:text-base lg:text-lg font-bold text-slate-900 leading-tight truncate">
+                    SuperAI Advisor
+                  </span>
+                  <span className="text-[10px] sm:text-xs text-slate-500 truncate">
+                    Your AI Investment Guide
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Desktop Navigation */}
-            {userProfile && (
-              <nav className="hidden lg:flex items-center gap-1 xl:gap-2 flex-1 justify-center max-w-2xl mx-4">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = currentView === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => setCurrentView(item.id as any)}
-                      className={`flex items-center gap-1.5 px-2 xl:px-3 py-2 rounded-lg transition-all duration-200 text-xs xl:text-sm font-medium whitespace-nowrap ${
-                        isActive
-                          ? 'bg-blue-100 text-blue-700 shadow-sm scale-105'
-                          : 'text-slate-600 hover:text-blue-700 hover:bg-slate-50 hover:scale-102'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 flex-shrink-0" />
-                      <span className="hidden xl:inline">{item.label}</span>
-                    </button>
-                  );
-                })}
-              </nav>
-            )}
+            {/* 2. Spacer (free space) */}
+            <div className="hidden md:block" />
 
-            {/* User Info & Actions */}
-            {userProfile && (
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink-0">
-                {/* Portfolio Value Display */}
-                <div className="hidden sm:flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">
-                  <div className="text-right min-w-0">
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs font-medium text-slate-900 truncate">
-                        {portfolioLoading ? 'Loading...' : formatPortfolioValue(totalPortfolioValue)}
-                      </span>
+            {/* 3. Navigation */}
+            <div className="flex items-center justify-center">
+              {userProfile && (
+                <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = effectiveView === item.id;
+                    return (
                       <button
-                        onClick={handleRefreshPortfolio}
-                        disabled={refreshing || portfolioLoading}
-                        className="p-1 text-slate-500 hover:text-blue-600 disabled:opacity-50 transition-colors"
-                        title="Refresh portfolio value"
+                        key={item.id}
+                        onClick={() => setCurrentView(item.id as any)}
+                        className={`flex items-center gap-1.5 px-2 xl:px-3 py-2 rounded-lg transition-all duration-200 text-xs xl:text-sm font-medium whitespace-nowrap ${
+                          isActive
+                            ? 'bg-blue-100 text-blue-700 shadow-sm scale-105'
+                            : 'text-slate-600 hover:text-blue-700 hover:bg-slate-50 hover:scale-102'
+                        }`}
                       >
-                        <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
+                        <Icon className="w-4 h-4 flex-shrink-0" />
+                        <span className="hidden xl:inline">{item.label}</span>
                       </button>
+                    );
+                  })}
+                </nav>
+              )}
+            </div>
+
+            {/* 4. Spacer (free space) */}
+            <div className="hidden md:block" />
+
+            {/* 5. Profile/Actions */}
+            <div className="flex items-center min-w-0 justify-end">
+              {userProfile && (
+                <>
+                  {/* Portfolio Value Display */}
+                  <div className="hidden sm:flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">
+                    <div className="text-right min-w-0">
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-medium text-slate-900 truncate">
+                          {portfolioLoading ? 'Loading...' : formatPortfolioValue(totalPortfolioValue)}
+                        </span>
+                        <button
+                          onClick={handleRefreshPortfolio}
+                          disabled={refreshing || portfolioLoading}
+                          className="p-1 text-slate-500 hover:text-blue-600 disabled:opacity-50 transition-colors"
+                          title="Refresh portfolio value"
+                        >
+                          <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-slate-500 truncate">Portfolio Value</p>
                     </div>
-                    <p className="text-[10px] text-slate-500 truncate">Portfolio Value</p>
                   </div>
-                </div>
 
-                {/* User Avatar */}
-                <button
-                  className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-600 to-green-600 rounded-full flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-400 shadow hover:scale-105 transition-all duration-200 flex-shrink-0"
-                  title="View Profile"
-                  onClick={() => setCurrentView('profile')}
-                >
-                  <span className="text-white font-bold text-sm sm:text-base">
-                    {userProfile.name.charAt(0)}
-                  </span>
-                </button>
+                  {/* Gap between portfolio value and profile icon */}
+                  <div className="hidden sm:block w-4" />
 
-                {/* Mobile Menu Button */}
-                <button
-                  className="inline-flex lg:hidden items-center justify-center p-2 rounded-lg text-slate-600 hover:text-blue-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors flex-shrink-0"
-                  aria-label="Open menu"
-                  onClick={() => setMobileMenuOpen(true)}
-                >
-                  <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
-                </button>
-              </div>
-            )}
+                  {/* User Avatar */}
+                  <button
+                    className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-600 to-green-600 rounded-full flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-400 shadow hover:scale-105 transition-all duration-200 flex-shrink-0"
+                    title="View Profile"
+                    onClick={() => setCurrentView('profile')}
+                  >
+                    <span className="text-white font-bold text-sm sm:text-base">
+                      {userProfile.name.charAt(0)}
+                    </span>
+                  </button>
+
+                  {/* Mobile Menu Button */}
+                  <button
+                    className="inline-flex lg:hidden items-center justify-center p-2 rounded-lg text-slate-600 hover:text-blue-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors flex-shrink-0"
+                    aria-label="Open menu"
+                    onClick={() => setMobileMenuOpen(true)}
+                  >
+                    <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </header>
