@@ -442,7 +442,7 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
             </div>
           </div>
         </>
-      )}
+      
 
     </div>
   );
