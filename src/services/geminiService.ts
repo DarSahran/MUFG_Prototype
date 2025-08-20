@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { apiRateLimiter } from '../utils/apiRateLimiter';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'demo-key';
 const genAI = new GoogleGenerativeAI(API_KEY);
@@ -28,11 +29,13 @@ export interface MarketInsight {
 }
 
 class GeminiService {
-  private model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+  private model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 
   async getInvestmentRecommendations(userProfile: any, marketData: any[]): Promise<InvestmentRecommendation[]> {
     // Enhanced prompt with more context
     try {
+      await apiRateLimiter.acquireToken();
+      
       const prompt = `
         As a professional financial advisor, analyze the following user profile and current market data to provide investment recommendations:
 
@@ -81,10 +84,24 @@ class GeminiService {
       const text = response.text();
 
       try {
-        const parsed = JSON.parse(text);
-        return parsed.recommendations || [];
+        // Strip markdown code blocks if present
+        const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
+        const parsed = JSON.parse(cleanText);
+        
+        // Validate and transform the recommendations
+        const recommendations = parsed.recommendations || [];
+        return recommendations.map((rec: any) => ({
+          ...rec,
+          confidence: typeof rec.confidence === 'number' ? rec.confidence : parseFloat(rec.confidence) || 0,
+          targetPrice: rec.targetPrice ? parseFloat(rec.targetPrice) : undefined,
+          expectedReturn: rec.expectedReturn ? parseFloat(rec.expectedReturn) : undefined,
+          volatility: rec.volatility ? parseFloat(rec.volatility) : undefined,
+          recommendation: rec.recommendation || 'HOLD',
+          riskLevel: rec.riskLevel || 'MEDIUM',
+          timeHorizon: rec.timeHorizon || 'LONG'
+        }));
       } catch (parseError) {
-        console.error('Error parsing Gemini response:', parseError);
+        console.error('Error parsing Gemini response:', parseError, 'Raw text:', text);
         return this.getFallbackRecommendations(userProfile);
       }
     } catch (error) {
@@ -95,6 +112,8 @@ class GeminiService {
 
   async getMarketInsights(marketData: any[], userProfile?: any): Promise<MarketInsight[]> {
     try {
+      await apiRateLimiter.acquireToken();
+      
       const prompt = `
         As a financial market analyst, provide 4-6 key market insights based on the current market data:
 
@@ -134,10 +153,21 @@ class GeminiService {
       const text = response.text();
 
       try {
-        const parsed = JSON.parse(text);
-        return parsed.insights || [];
+        // Strip markdown code blocks if present
+        const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
+        const parsed = JSON.parse(cleanText);
+        
+        // Validate and transform the insights
+        const insights = parsed.insights || [];
+        return insights.map((insight: any) => ({
+          ...insight,
+          timestamp: insight.timestamp || new Date().toISOString(),
+          category: insight.category || 'MARKET_TREND',
+          importance: insight.importance || 'MEDIUM',
+          actionable: typeof insight.actionable === 'boolean' ? insight.actionable : false
+        }));
       } catch (parseError) {
-        console.error('Error parsing Gemini insights response:', parseError);
+        console.error('Error parsing Gemini insights response:', parseError, 'Raw text:', text);
         return this.getFallbackInsights();
       }
     } catch (error) {
@@ -148,6 +178,8 @@ class GeminiService {
 
   async answerFinancialQuestion(question: string, userProfile?: any, context?: string): Promise<string> {
     try {
+      await apiRateLimiter.acquireToken();
+      
       const prompt = `
         As a qualified financial advisor specializing in Australian superannuation and investments, answer the following question:
 
@@ -195,7 +227,7 @@ class GeminiService {
         recommendation: 'BUY' as const,
         confidence: 85,
         reasoning: 'Broad Australian market exposure with low fees, suitable for long-term growth.',
-        targetPrice: 92.00,
+        targetPrice: 92.0,
         riskLevel: 'MEDIUM' as const,
         timeHorizon: 'LONG' as const,
         expectedReturn: 8.2,
@@ -208,7 +240,7 @@ class GeminiService {
         recommendation: 'BUY' as const,
         confidence: 88,
         reasoning: 'International diversification with exposure to global markets.',
-        targetPrice: 105.00,
+        targetPrice: 105.0,
         riskLevel: 'MEDIUM' as const,
         timeHorizon: 'LONG' as const,
         expectedReturn: 9.1,
@@ -221,7 +253,7 @@ class GeminiService {
         recommendation: 'HOLD' as const,
         confidence: 75,
         reasoning: 'Provides stability and income, good for defensive allocation.',
-        targetPrice: 52.00,
+        targetPrice: 52.0,
         riskLevel: 'LOW' as const,
         timeHorizon: 'MEDIUM' as const,
         expectedReturn: 4.2,
@@ -241,6 +273,7 @@ class GeminiService {
         recommendation: 'BUY' as const,
         confidence: 78,
         reasoning: 'Higher growth potential through emerging markets exposure.',
+        targetPrice: 45.5,
         riskLevel: 'HIGH' as const,
         timeHorizon: 'LONG' as const,
         expectedReturn: 10.5,

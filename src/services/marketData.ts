@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { apiRateLimiter } from '../utils/apiRateLimiter';
 
 const ALPHA_VANTAGE_API_KEY = import.meta.env.VITE_ALPHA_VANTAGE_API_KEY || 'demo';
 const ALPHA_VANTAGE_URL = 'https://www.alphavantage.co/query';
@@ -66,8 +67,11 @@ class MarketDataService {
 
     return this.fetchWithFallback(
       async () => {
+        await apiRateLimiter.acquireToken();
+        
         // Try Yahoo Finance first
         try {
+          console.log(`Fetching quote for ${symbol} from Yahoo Finance...`);
           const response = await axios.get(`${YAHOO_FINANCE_URL}/quote`, {
             params: { symbols: symbol },
             timeout: 5000,
@@ -77,14 +81,15 @@ class MarketDataService {
           if (quote) {
             const stockData: StockData = {
               symbol: quote.symbol,
-              price: quote.regularMarketPrice,
-              change: quote.regularMarketChange,
-              changePercent: quote.regularMarketChangePercent,
-              volume: quote.regularMarketVolume,
+              price: parseFloat(quote.regularMarketPrice) || 0,
+              change: parseFloat(quote.regularMarketChange) || 0,
+              changePercent: parseFloat(quote.regularMarketChangePercent) || 0,
+              volume: parseInt(quote.regularMarketVolume) || 0,
               marketCap: quote.marketCap,
               pe: quote.trailingPE,
               dividend: quote.dividendYield,
             };
+            console.log(`Successfully fetched ${symbol}:`, stockData);
             this.setCachedData(cacheKey, stockData);
             return stockData;
           }
@@ -92,6 +97,9 @@ class MarketDataService {
           console.warn('Yahoo Finance failed, trying Alpha Vantage:', yahooError);
         }
 
+        await apiRateLimiter.acquireToken();
+        
+        console.log(`Fetching quote for ${symbol} from Alpha Vantage...`);
         // Fallback to Alpha Vantage
         const response = await axios.get(ALPHA_VANTAGE_URL, {
           params: {
@@ -113,6 +121,7 @@ class MarketDataService {
           volume: parseInt(quote['06. volume']),
         };
 
+        console.log(`Successfully fetched ${symbol} from Alpha Vantage:`, stockData);
         this.setCachedData(cacheKey, stockData);
         return stockData;
       },
@@ -127,6 +136,8 @@ class MarketDataService {
 
     return this.fetchWithFallback(
       async () => {
+        await apiRateLimiter.acquireToken();
+        
         const functionMap = {
           daily: 'TIME_SERIES_DAILY',
           weekly: 'TIME_SERIES_WEEKLY',
@@ -172,6 +183,8 @@ class MarketDataService {
 
     return this.fetchWithFallback(
       async () => {
+        await apiRateLimiter.acquireToken();
+        
         const coinId = this.symbolToCoinGeckoId(symbol);
         if (!coinId) throw new Error('Unsupported crypto symbol');
 
@@ -225,6 +238,8 @@ class MarketDataService {
 
     return this.fetchWithFallback(
       async () => {
+        await apiRateLimiter.acquireToken();
+        
         const response = await axios.get(ALPHA_VANTAGE_URL, {
           params: {
             function: 'NEWS_SENTIMENT',

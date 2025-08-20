@@ -31,19 +31,28 @@ export const SuperTab: React.FC<SuperTabProps> = ({ holdings, userProfile }) => 
   const handleRefreshSuper = async () => {
     setRefreshing(true);
     try {
-      // In a real app, this would fetch updated super balances from fund APIs
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Simulate API call to super fund for balance updates
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Update super holdings with latest values
       for (const holding of superHoldings) {
-        // Simulate small growth
-        const growth = holding.currentPrice * 0.001; // 0.1% growth
-        await updateHolding(holding.id, { 
-          currentPrice: holding.currentPrice + growth 
-        });
+        try {
+          // Simulate realistic super fund growth (0.05% to 0.2% daily)
+          const dailyGrowthRate = (Math.random() * 0.0015) + 0.0005; // 0.05% to 0.2%
+          const growth = holding.currentPrice * dailyGrowthRate;
+          
+          await updateHolding(holding.id, { 
+            currentPrice: holding.currentPrice + growth 
+          });
+        } catch (error) {
+          console.error(`Error updating super fund ${holding.id}:`, error);
+        }
       }
+      
+      console.log('Super fund balances refreshed successfully');
     } catch (error) {
       console.error('Error refreshing super data:', error);
+      alert('Failed to refresh super fund data. Please try again.');
     } finally {
       setRefreshing(false);
     }
@@ -124,9 +133,10 @@ export const SuperTab: React.FC<SuperTabProps> = ({ holdings, userProfile }) => 
             <button
               onClick={handleRefreshSuper}
               disabled={refreshing}
-              className="text-sm font-medium text-blue-700 hover:text-blue-800 disabled:opacity-50"
+              className="flex items-center gap-1 px-3 py-1 text-sm font-medium text-blue-700 hover:text-blue-800 disabled:opacity-50 bg-white/50 rounded-lg hover:bg-white/80 transition-colors"
             >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Updating...' : 'Refresh'}
             </button>
           </div>
           <h3 className="text-2xl font-bold text-slate-900 mb-1">

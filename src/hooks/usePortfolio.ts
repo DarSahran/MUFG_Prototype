@@ -263,9 +263,15 @@ export const usePortfolio = () => {
   };
 
   const getTotalPortfolioValue = () => {
-    return holdings.reduce((total, holding) => {
-      return total + (holding.quantity * holding.currentPrice);
-    }, 0);
+    try {
+      return holdings.reduce((total, holding) => {
+        const value = holding.quantity * holding.currentPrice;
+        return total + (isNaN(value) ? 0 : value);
+      }, 0);
+    } catch (error) {
+      console.error('Error calculating portfolio value:', error);
+      return 0;
+    }
   };
 
   const getAssetAllocation = () => {

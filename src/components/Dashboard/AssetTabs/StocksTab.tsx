@@ -5,7 +5,7 @@ import { UserProfile } from '../../../App';
 import { AssetSearchModal } from '../../AssetSearchModal';
 import { usePortfolio } from '../../../hooks/usePortfolio';
 import { useRealTimeData } from '../../../hooks/useRealTimeData';
-import { realTimeMarketDataService } from '../../../services/realTimeMarketData';
+import { marketDataService } from '../../../services/marketData';
 
 interface StocksTabProps {
   holdings: AssetHolding[];
@@ -50,17 +50,25 @@ export const StocksTab: React.FC<StocksTabProps> = ({ holdings, userProfile }) =
     try {
       await refreshPrices();
       
-      // Also update prices from market data service
+      // Update prices from market data service with error handling
       for (const holding of stockHoldings) {
         if (holding.symbol) {
-          const quote = await realTimeMarketDataService.getCurrentPrice(holding.symbol, 'stock');
-          if (quote) {
-            await updateHolding(holding.id, { currentPrice: quote.price });
+          try {
+            const quote = await marketDataService.getStockQuote(holding.symbol);
+            if (quote && quote.price > 0) {
+              await updateHolding(holding.id, { currentPrice: quote.price });
+            }
+          } catch (error) {
+            console.error(`Error updating price for ${holding.symbol}:`, error);
           }
         }
       }
+      
+      // Show success message
+      console.log('Stock prices refreshed successfully');
     } catch (error) {
       console.error('Error refreshing prices:', error);
+      alert('Failed to refresh some stock prices. Please try again.');
     } finally {
       setRefreshing(false);
     }
@@ -167,8 +175,9 @@ export const StocksTab: React.FC<StocksTabProps> = ({ holdings, userProfile }) =
             <button
               onClick={handleRefreshPrices}
               disabled={refreshing}
-              className="text-sm font-medium text-orange-700 hover:text-orange-800 disabled:opacity-50"
+              className="flex items-center gap-1 px-3 py-1 text-sm font-medium text-orange-700 hover:text-orange-800 disabled:opacity-50 bg-white/50 rounded-lg hover:bg-white/80 transition-colors"
             >
+              <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
               {refreshing ? 'Updating...' : 'Refresh'}
             </button>
           </div>
