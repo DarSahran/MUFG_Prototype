@@ -44,22 +44,21 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
   const [passwordStrength, setPasswordStrength] = useState({ score: 0, strength: 'weak', feedback: [] })
   const [passwordsMatch, setPasswordsMatch] = useState(true)
 
   const validateForm = () => {
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
+      setMessage({ type: 'error', text: 'Passwords do not match' });
       return false
     }
     if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long')
+      setMessage({ type: 'error', text: 'Password must be at least 8 characters long' });
       return false
     }
     if (!formData.agreeToTerms) {
-      setError('You must agree to the Terms of Service')
+      setMessage({ type: 'error', text: 'You must agree to the Terms of Service' });
       return false
     }
     return true
@@ -67,7 +66,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
+    setMessage(null)
 
     if (!validateForm()) return
 
@@ -81,9 +80,9 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
     console.log('Supabase signup response:', { data, error })
 
     if (error) {
-      setError(error.message)
+      setMessage({ type: 'error', text: error.message });
     } else {
-      setSuccess(true)
+      setMessage({ type: 'success', text: 'Account created successfully! Please check your email.' });
       // Store user's name in localStorage for onboarding
       localStorage.setItem('userFullName', `${formData.firstName} ${formData.lastName}`)
     }
@@ -111,7 +110,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
     }
   }
 
-  if (success) {
+  if (message?.type === 'success') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center py-12 px-4">
         <div className="max-w-md w-full text-center">
@@ -121,14 +120,13 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
             </div>
             <h2 className="text-2xl font-bold text-slate-900 mb-4">Check Your Email</h2>
             <p className="text-slate-600 mb-6">
-              We've sent a confirmation link to <strong>{formData.email}</strong>. 
-              Please check your email and click the link to activate your account.
+              Account created successfully! You can now sign in with your credentials.
             </p>
             <button
               onClick={onSwitchToLogin}
               className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg hover:from-blue-700 hover:to-green-700 transition-all duration-200 font-semibold"
             >
-              Back to Sign In
+              Sign In Now
             </button>
           </div>
         </div>
@@ -161,9 +159,17 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSwitchToLogin 
         {/* Signup Form */}
         <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 border border-slate-200">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-700 text-xs sm:text-sm">{error}</p>
+            {message && (
+              <div className={`p-3 sm:p-4 border rounded-lg ${
+                message.type === 'error' 
+                  ? 'bg-red-50 border-red-200' 
+                  : 'bg-green-50 border-green-200'
+              }`}>
+                <p className={`text-xs sm:text-sm ${
+                  message.type === 'error' ? 'text-red-700' : 'text-green-700'
+                }`}>
+                  {message.text}
+                </p>
               </div>
             )}
 

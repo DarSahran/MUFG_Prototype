@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, MessageCircle, BookOpen, BarChart3, LineChart, Briefcase, Calculator, Bot, Menu, X, RefreshCw, DollarSign } from 'lucide-react';
+import { TrendingUp, MessageCircle, BookOpen, BarChart3, LineChart, Briefcase, Calculator, Bot, Menu, X, RefreshCw, DollarSign, Star } from 'lucide-react';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { UserProfile } from '../App';
 
@@ -7,9 +7,11 @@ interface HeaderProps {
   currentView: string;
   setCurrentView: (view: 'onboarding' | 'dashboard' | 'combined-ai' | 'education' | 'profile' | 'market' | 'investments' | 'forecasting') => void;
   userProfile: UserProfile | null;
+  subscription?: any;
+  subscriptionPlan?: any;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, userProfile }) => {
+export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, userProfile, subscription, subscriptionPlan }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { getTotalPortfolioValue, loading: portfolioLoading, refetch } = usePortfolio();
   const [refreshing, setRefreshing] = useState(false);
@@ -141,6 +143,14 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, use
                       {userProfile.name.charAt(0)}
                     </span>
                   </button>
+              
+                  {/* Subscription Badge */}
+                  {subscriptionPlan && (
+                    <div className="hidden sm:flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                      <Star className="w-3 h-3 mr-1" />
+                      {subscriptionPlan.name.replace('SuperAI ', '')}
+                    </div>
+                  )}
 
                   {/* Mobile Menu Button */}
                   <button
@@ -240,6 +250,21 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, use
               
               {/* User Profile Section */}
               <div className="border-t border-slate-200 p-4 bg-slate-50">
+                {/* Subscription Status */}
+                {subscriptionPlan && (
+                  <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <Star className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-900">
+                        {subscriptionPlan.name} Plan
+                      </span>
+                    </div>
+                    <p className="text-xs text-green-700 mt-1">
+                      Active subscription
+                    </p>
+                  </div>
+                )}
+                
                 <button
                   onClick={() => { 
                     setCurrentView('profile'); 

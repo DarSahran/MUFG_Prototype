@@ -11,30 +11,29 @@ export const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onBack, 
   const { resetPassword } = useAuth()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setError(null)
+    setMessage(null)
 
     const { error } = await resetPassword(email)
     if (error) {
       if (error.message.includes('User not found')) {
-        setError('No account found with this email.');
+        setMessage({ type: 'error', text: 'No account found with this email.' });
       } else if (error.message.includes('not allowed')) {
-        setError('Password reset is not allowed for this account.');
+        setMessage({ type: 'error', text: 'Password reset is not allowed for this account.' });
       } else {
-        setError(error.message)
+        setMessage({ type: 'error', text: error.message });
       }
     } else {
-      setSuccess(true)
+      setMessage({ type: 'success', text: 'Password reset link sent to your email.' });
     }
     setLoading(false)
   }
 
-  if (success) {
+  if (message?.type === 'success') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center py-12 px-4">
         <div className="max-w-md w-full text-center">
@@ -84,9 +83,17 @@ export const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onBack, 
         {/* Reset Form */}
         <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 border border-slate-200">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-700 text-xs sm:text-sm">{error}</p>
+            {message && (
+              <div className={`p-3 sm:p-4 border rounded-lg ${
+                message.type === 'error' 
+                  ? 'bg-red-50 border-red-200' 
+                  : 'bg-green-50 border-green-200'
+              }`}>
+                <p className={`text-xs sm:text-sm ${
+                  message.type === 'error' ? 'text-red-700' : 'text-green-700'
+                }`}>
+                  {message.text}
+                </p>
               </div>
             )}
 
