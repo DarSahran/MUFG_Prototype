@@ -212,7 +212,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
   const currentWord = dynamicWords[currentWordIndex];
 
   return (
-    <div className="min-h-screen bg-white overflow-x-hidden">
+  <div className="min-h-screen bg-white overflow-x-hidden flex flex-col">
       {/* Animated Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
@@ -221,9 +221,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </div>
 
       {/* Header */}
-      <header className="relative bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-50">
-  <div className="max-w mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+    <header className="relative bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-50 h-auto min-h-[56px] sm:min-h-[64px] flex items-center">
+  <div className="max-w mx-auto px-3 sm:px-4 md:px-6 lg:px-8 w-full">
+      <div className="flex justify-between items-center h-16 min-h-[56px] sm:min-h-[64px]">
             <div className="flex items-center space-x-2 sm:space-x-3 group cursor-pointer min-w-0">
               <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-600 to-green-600 rounded-lg group-hover:scale-110 transition-transform duration-300">
                 <TrendingUp className="w-6 h-6 text-white" />
@@ -245,9 +245,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-50 via-white to-green-50 py-20 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+      <section className="relative bg-gradient-to-br from-blue-50 via-white to-green-50 py-12 sm:py-16 md:py-20 overflow-hidden min-h-[60vh] flex items-center">
+        <div className="max-w mx-auto px-3 sm:px-4 md:px-6 lg:px-8 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center min-h-[40vh]">
             <div className="animate-fade-in-up">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-slate-900 mb-6 leading-tight">
                 Maximize Your{' '}
@@ -362,9 +362,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </section>
 
       {/* Interactive Stats Section */}
-      <section id="stats-section" className="py-16 bg-gradient-to-r from-slate-900 to-blue-900 relative overflow-hidden">
+      <section id="stats-section" className="py-10 sm:py-14 md:py-16 bg-gradient-to-r from-slate-900 to-blue-900 relative overflow-hidden min-h-[40vh] flex items-center">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%239C92AC%22 fill-opacity=%220.1%22%3E%3Ccircle cx=%2230%22 cy=%2230%22 r=%222%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 relative">
+        <div className="max-w mx-auto px-3 sm:px-4 md:px-6 lg:px-8 relative w-full">
           <div className="text-center mb-8 sm:mb-12">
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4 animate-fade-in-up">
               Trusted by Smart Investors
@@ -400,7 +400,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </section>
 
       {/* Investment Projections Section */}
-      <section className="py-20 bg-gradient-to-br from-white via-blue-50 to-green-50 relative overflow-hidden">
+  <section className="py-12 sm:py-16 md:py-20 bg-gradient-to-br from-white via-blue-50 to-green-50 relative overflow-hidden min-h-[60vh] flex items-center">
         {/* Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-20 left-10 w-32 h-32 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-float"></div>
@@ -408,8 +408,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
-          <div className="text-center mb-16 lg:mb-20 relative">
+  <div className="max-w mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+          <div className="text-center mb-10 md:mb-16 lg:mb-20 relative">
             <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-100 to-green-100 rounded-full text-sm font-medium text-blue-700 mb-6 animate-bounce">
               <TrendingUp className="w-4 h-4 mr-2" />
               Interactive Wealth Simulator
@@ -417,12 +417,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-6 animate-fade-in-up">
               Watch Your Money <span className="bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">Multiply</span>
             </h2>
-            <p className="text-xl sm:text-2xl text-slate-700 max-w-4xl mx-auto mb-8 animate-fade-in-up animation-delay-300 leading-relaxed">
+            <p className="text-xl sm:text-2xl text-slate-700 max-w mx-auto mb-8 animate-fade-in-up animation-delay-300 leading-relaxed">
               See exactly how much <strong className="text-green-600">extra money</strong> you could have in retirement with smarter investment choices
             </p>
 
             {/* Key Stats Preview */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w mx-auto mb-12">
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/50">
                 <div className="text-3xl font-bold text-green-600 mb-2">$847K</div>
                 <div className="text-sm text-slate-600">Extra with Smart Strategy</div>
@@ -439,13 +439,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
           </div>
 
           {/* Interactive Strategy Comparison */}
-          <div className="mb-16 lg:mb-20">
+          <div className="mb-10 md:mb-16 lg:mb-20">
             <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 lg:p-12 border border-white/50">
               <div className="text-center mb-12">
                 <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-4">
                   💰 The Million Dollar Question
                 </h3>
-                <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+                <p className="text-lg text-slate-600 max-w mx-auto">
                   Which investment strategy will make you the most money? The difference might shock you.
                 </p>
               </div>
@@ -521,27 +521,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             </div>
           </div>
 
-<div className="rounded-2xl shadow-xl bg-white p-8 border border-blue-100 mb-12">
-  <div className="flex items-center mb-6">
-    <div className="bg-gradient-to-r from-blue-500 to-green-500 rounded-lg p-3 mr-3">
-      <LineChart className="w-7 h-7 text-white" />
+<div className="rounded-xl shadow-lg bg-white p-6 md:p-8 border border-slate-200 mb-12 min-h-[320px] md:min-h-[400px] flex flex-col gap-4 md:gap-6">
+  <div className="flex items-center mb-4 md:mb-6">
+    <div className="bg-gradient-to-r from-blue-700 to-slate-600 rounded-md p-2 md:p-3 mr-3">
+      <LineChart className="w-6 h-6 md:w-7 md:h-7 text-white" />
     </div>
-    <span className="font-bold text-slate-900 text-2xl">Your Wealth Journey</span>
+    <span className="font-semibold text-slate-800 text-lg md:text-2xl tracking-tight">Wealth Projection</span>
   </div>
-  <div className="bg-blue-50 rounded-xl p-6 mb-8 border border-blue-200">
-    <p className="text-blue-700 text-base">
-      Starting with <span className="font-bold text-blue-600">${calculatorInputs.currentSuper.toLocaleString()}</span> and contributing <span className="font-bold text-blue-600">${calculatorInputs.monthlyContribution.toLocaleString()}</span> monthly, see how your strategy grows your wealth!
+  <div className="bg-slate-50 rounded-lg p-4 md:p-6 mb-6 border border-slate-200">
+    <p className="text-slate-700 text-sm md:text-base">
+      Starting with <span className="font-semibold text-blue-700">${calculatorInputs.currentSuper.toLocaleString()}</span> and contributing <span className="font-semibold text-blue-700">${calculatorInputs.monthlyContribution.toLocaleString()}</span> monthly, see your projected super balance over time.
     </p>
   </div>
-  <div className="h-80 relative">
+  <div className="h-64 md:h-80 relative">
     <ResponsiveContainer width="100%" height="100%">
-      <RechartsLineChart data={projectionData} margin={{top: 30, right: 30, left: 0, bottom: 0}}>
-        <CartesianGrid strokeDasharray="4 4" stroke="#e0e7ef" />
-        <XAxis dataKey="year" stroke="#334155" fontSize={13}/>
+      <RechartsLineChart data={projectionData} margin={{top: 20, right: 30, left: 0, bottom: 0}}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+        <XAxis dataKey="year" stroke="#64748b" fontSize={12} tickLine={false} axisLine={{stroke:'#e5e7eb'}}/>
         <YAxis 
           tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
-          stroke="#334155"
-          fontSize={13}
+          stroke="#64748b"
+          fontSize={12}
+          tickLine={false}
+          axisLine={{stroke:'#e5e7eb'}}
         />
         <Tooltip
           formatter={(value, name) => {
@@ -550,32 +552,39 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
           }}
           labelFormatter={label => `Year: ${label}`}
           contentStyle={{
-            background: 'white',
-            border: '1px solid #e0e8ef',
-            borderRadius: '12px',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.04)',
-            color: '#334155'
+            background: '#f8fafc',
+            border: '1px solid #cbd5e1',
+            borderRadius: '8px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            color: '#334155',
+            fontSize: '13px',
+            padding: '8px 12px'
           }}
         />
-        <Legend height={50} />
-        <Line type="monotone" dataKey="conservative" stroke="#EF4444" strokeWidth={4} dot={{ fill: '#EF4444', r: 7 }} name="Conservative" strokeDasharray="5 5" />
-        <Line type="monotone" dataKey="moderate" stroke="#3B82F6" strokeWidth={5} dot={{ fill: '#3B82F6', r: 8 }} name="Moderate" />
-        <Line type="monotone" dataKey="aggressive" stroke="#22C55E" strokeWidth={5} dot={{ fill: '#22C55E', r: 8 }} name="Aggressive" />
+        <Legend
+          verticalAlign="top"
+          align="right"
+          iconType="plainline"
+          wrapperStyle={{paddingBottom: 8, fontSize: 13, color: '#64748b'}}
+        />
+        <Line type="monotone" dataKey="conservative" stroke="#b91c1c" strokeWidth={2.5} dot={false} name="Conservative" strokeDasharray="5 5" />
+        <Line type="monotone" dataKey="moderate" stroke="#2563eb" strokeWidth={3} dot={false} name="Moderate" />
+        <Line type="monotone" dataKey="aggressive" stroke="#15803d" strokeWidth={3} dot={false} name="Aggressive" />
       </RechartsLineChart>
     </ResponsiveContainer>
   </div>
-  <div className="flex justify-center gap-4 mt-8 text-sm">
-    <div className="flex items-center gap-2 px-3 py-2 rounded-full border bg-red-50 border-red-200">
-      <div className="w-4 h-1 bg-red-500 rounded mr-2"></div>
-      <span className="text-red-700 font-semibold">Conservative (5.5%)</span>
+  <div className="flex flex-wrap justify-center gap-2 md:gap-4 mt-6 text-xs md:text-sm">
+    <div className="flex items-center gap-2 px-2.5 py-1.5 rounded border border-slate-200 bg-white">
+      <span className="inline-block w-3 h-1.5 rounded bg-[#b91c1c] mr-1"></span>
+      <span className="text-slate-700 font-medium">Conservative (5.5%)</span>
     </div>
-    <div className="flex items-center gap-2 px-3 py-2 rounded-full border bg-blue-50 border-blue-200">
-      <div className="w-4 h-2 bg-blue-500 rounded mr-2"></div>
-      <span className="text-blue-700 font-bold">Moderate (7.5%) ⭐</span>
+    <div className="flex items-center gap-2 px-2.5 py-1.5 rounded border border-slate-200 bg-white">
+      <span className="inline-block w-3 h-1.5 rounded bg-[#2563eb] mr-1"></span>
+      <span className="text-slate-700 font-semibold">Moderate (7.5%)</span>
     </div>
-    <div className="flex items-center gap-2 px-3 py-2 rounded-full border bg-green-50 border-green-200">
-      <div className="w-4 h-1 bg-green-500 rounded mr-2"></div>
-      <span className="text-green-700 font-semibold">Aggressive (9.5%)</span>
+    <div className="flex items-center gap-2 px-2.5 py-1.5 rounded border border-slate-200 bg-white">
+      <span className="inline-block w-3 h-1.5 rounded bg-[#15803d] mr-1"></span>
+      <span className="text-slate-700 font-medium">Aggressive (9.5%)</span>
     </div>
   </div>
 </div>
@@ -590,7 +599,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
               <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4">
                 Ready to Build Your Wealth Strategy?
               </h3>
-              <p className="text-lg sm:text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+              <p className="text-lg sm:text-xl text-blue-100 mb-8 max-w mx-auto">
                 Get your personalized investment plan in under 5 minutes.
                 See exactly how much you could have at retirement.
               </p>
@@ -610,13 +619,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+      <section className="py-12 sm:py-16 md:py-20 bg-slate-50 min-h-[50vh] flex items-center">
+        <div className="max-w mx-auto px-3 sm:px-4 md:px-6 lg:px-8 w-full">
           <div className="text-center mb-12 lg:mb-16">
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-4 animate-fade-in-up">
               Why Choose SuperAI Advisor?
             </h2>
-            <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto animate-fade-in-up animation-delay-300">
+            <p className="text-lg sm:text-xl text-slate-600 max-w mx-auto animate-fade-in-up animation-delay-300">
               Our AI-powered platform combines cutting-edge technology with proven investment strategies
               to help you make smarter decisions about your superannuation.
             </p>
@@ -767,9 +776,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </div>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-green-600 relative overflow-hidden">
+      <section className="py-12 sm:py-16 md:py-20 bg-gradient-to-r from-blue-600 to-green-600 relative overflow-hidden min-h-[40vh] flex items-center">
         <div className="absolute inset-0 bg-black/10"></div>
-        <div className="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 text-center relative">
+        <div className="max-w mx-auto px-3 sm:px-4 md:px-6 lg:px-8 text-center relative w-full">
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-6 animate-fade-in-up">
             Ready to Optimize Your Retirement Strategy?
           </h2>
@@ -791,8 +800,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-900 py-12">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+      <footer className="bg-slate-900 py-8 sm:py-10 md:py-12">
+        <div className="max-w mx-auto px-3 sm:px-4 md:px-6 lg:px-8 w-full">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
             <div className="col-span-1 sm:col-span-2 md:col-span-2">
               <div className="flex items-center space-x-3 mb-4 group cursor-pointer">
@@ -804,7 +813,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                   <p className="text-slate-400 text-xs sm:text-sm">Your AI Investment Guide</p>
                 </div>
               </div>
-              <p className="text-slate-400 mb-4 max-w-md text-sm sm:text-base">
+              <p className="text-slate-400 mb-4 max-w text-sm sm:text-base">
                 Empowering Australians to make smarter superannuation decisions through
                 AI-powered insights and personalized investment strategies.
               </p>
