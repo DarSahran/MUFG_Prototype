@@ -3,7 +3,7 @@ import { TrendingUp, TrendingDown, Activity, BarChart3, LineChart, PieChart, Ref
 import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart as RechartsPieChart, Cell } from 'recharts';
 import { RealTimeMarketDashboard } from './MarketData/RealTimeMarketDashboard';
 import { usePlanAccess } from '../hooks/usePlanAccess';
-import { marketDataService } from '../services/marketData';
+import { customBackendAPI } from '../services/customBackendAPI';
 
 interface StockData {
   symbol: string;
@@ -55,36 +55,78 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
   useEffect(() => {
     loadMarketData();
     loadMarketAlerts();
-    
-    // Show realtime dashboard if user has access
-    if (checkFeatureAccess('realtimeAccess')) {
-      setShowRealtimeDashboard(true);
-    }
   }, [selectedAssets, timeframe]);
 
   const loadMarketData = async () => {
+    // Check if we've loaded data recently to prevent excessive requests
+    const lastLoad = localStorage.getItem('lastMarketDataLoad');
+    const timeSinceLoad = lastLoad ? Date.now() - parseInt(lastLoad) : Infinity;
+    
+    if (timeSinceLoad < 300000) { // 5 minutes minimum between loads
+      console.log('Skipping market data load - too recent');
+      return;
+    }
+
     setLoading(true);
     try {
-      const stockPromises = selectedAssets.map(async (symbol) => {
-        const data = await marketDataService.getStockQuote(symbol);
-        return data || marketDataService.getMockStockData(symbol);
-      });
-
-      const stocks = await Promise.all(stockPromises);
+      localStorage.setItem('lastMarketDataLoad', Date.now().toString());
+      
+      // Use custom backend API for market data
+      const quotes = await customBackendAPI.getMultipleQuotes(selectedAssets);
+      const stocks = Object.values(quotes).map(quote => ({
+        symbol: quote.symbol,
+        price: quote.regularMarketPrice,
+        change: quote.regularMarketPrice - quote.previousClose,
+        changePercent: ((quote.regularMarketPrice - quote.previousClose) / quote.previousClose) * 100,
+        volume: 0, // Not provided by backend
+      }));
+      
       setMarketData(stocks);
 
       // Load chart data for the first selected asset
       if (selectedAssets.length > 0) {
-        const historical = await marketDataService.getHistoricalData(selectedAssets[0], 'daily');
-        setChartData(historical.length > 0 ? historical : marketDataService.getMockChartData());
+        // Generate mock historical data since backend doesn't provide it
+        setChartData(generateMockChartData());
       }
     } catch (error) {
       console.error('Error loading market data:', error);
-      setMarketData(selectedAssets.map(symbol => marketDataService.getMockStockData(symbol)));
-      setChartData(marketDataService.getMockChartData());
+      // Use fallback data
+      setMarketData(selectedAssets.map(symbol => ({
+        symbol,
+        price: 100,
+        change: 0,
+        changePercent: 0,
+        volume: 0
+      })));
+      setChartData(generateMockChartData());
     } finally {
       setLoading(false);
     }
+  };
+
+  const generateMockChartData = () => {
+    const data = [];
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + i);
+      
+      const basePrice = 100 + Math.sin(i / 5) * 10;
+      const volatility = Math.random() * 4 - 2;
+      
+      data.push({
+        date: date.toISOString().split('T')[0],
+        open: basePrice + volatility,
+        high: basePrice + volatility + Math.random() * 3,
+        low: basePrice + volatility - Math.random() * 3,
+        close: basePrice + volatility + (Math.random() - 0.5) * 2,
+        volume: Math.floor(Math.random() * 100000) + 50000,
+      });
+    }
+
+    return data;
   };
 
   const loadMarketAlerts = async () => {
@@ -408,9 +450,10 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
 
             <button
               onClick={loadMarketData}
-              className="flex items-center space-x-2 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm"
+              className="flex items-center space-x-2 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm disabled:opacity-50"
+              disabled={loading}
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Refresh</span>
             </button>
             

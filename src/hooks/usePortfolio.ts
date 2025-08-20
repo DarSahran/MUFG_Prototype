@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import { AssetHolding } from '../types/portfolio';
+import { customBackendAPI } from '../services/customBackendAPI';
 
 interface UserGoal {
   id: string;
@@ -42,6 +43,41 @@ export const usePortfolio = () => {
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefreshPortfolio = async () => {
+    if (refreshing) {
+      console.log('Refresh already in progress, skipping...');
+      return; // Prevent multiple simultaneous refreshes
+    }
+    
+    setRefreshing(true);
+    setError(null);
+    
+    try {
+      // Only update prices if we have symbols and haven't updated recently
+      const symbolHoldings = holdings.filter(h => h.symbol);
+      if (symbolHoldings.length > 0) {
+        const lastUpdate = localStorage.getItem('lastPortfolioUpdate');
+        const timeSinceUpdate = lastUpdate ? Date.now() - parseInt(lastUpdate) : Infinity;
+        
+        if (timeSinceUpdate > 300000) { // 5 minutes minimum between updates
+          await updateAssetPrices();
+          localStorage.setItem('lastPortfolioUpdate', Date.now().toString());
+        } else {
+          console.log('Skipping price update - too recent');
+        }
+      }
+      
+      // Refetch portfolio data
+      await fetchPortfolioData();
+    } catch (error) {
+      console.error('Error refreshing portfolio:', error);
+      setError('Failed to refresh portfolio data');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -262,6 +298,50 @@ export const usePortfolio = () => {
     }
   };
 
+  const updateAssetPrices = async () => {
+    if (!user || holdings.length === 0) {
+      console.log('No user or holdings, skipping price update');
+      return;
+    }
+
+    try {
+      // Get symbols that have them
+      const symbolHoldings = holdings.filter(h => h.symbol);
+      const symbols = symbolHoldings.map(h => h.symbol!);
+      
+      if (symbols.length === 0) {
+        console.log('No symbols to update');
+        return;
+      }
+      
+      console.log(`Updating prices for ${symbols.length} symbols:`, symbols);
+      
+      // Fetch latest prices from custom backend
+      const quotes = await customBackendAPI.getMultipleQuotes(symbols);
+      console.log('Received quotes:', Object.keys(quotes));
+      
+      // Update holdings with new prices
+      const updatePromises = symbolHoldings.map(async (holding) => {
+        const quote = quotes[holding.symbol!];
+        if (quote && quote.regularMarketPrice > 0) {
+          console.log(`Updating ${holding.symbol} price: ${holding.currentPrice} -> ${quote.regularMarketPrice}`);
+          return updateHolding(holding.id, { 
+            currentPrice: quote.regularMarketPrice 
+          });
+        } else {
+          console.log(`No valid quote for ${holding.symbol}`);
+        }
+      });
+      
+      const results = await Promise.allSettled(updatePromises);
+      console.log('Price update results:', results);
+      
+    } catch (error) {
+      console.error('Error updating asset prices:', error);
+      throw error; // Re-throw to be caught by handleRefreshPortfolio
+    }
+  };
+
   const getTotalPortfolioValue = () => {
     try {
       return holdings.reduce((total, holding) => {
@@ -294,6 +374,7 @@ export const usePortfolio = () => {
     preferences,
     loading,
     error,
+    refreshing,
     addHolding,
     updateHolding,
     deleteHolding,
@@ -301,6 +382,8 @@ export const usePortfolio = () => {
     updatePreferences,
     getTotalPortfolioValue,
     getAssetAllocation,
+    updateAssetPrices,
+    handleRefreshPortfolio,
     refetch: fetchPortfolioData,
   };
 };
