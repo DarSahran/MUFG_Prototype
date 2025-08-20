@@ -160,7 +160,7 @@ Deno.serve(async (req: Request) => {
 async function checkUserLimits(userId: string): Promise<{ allowed: boolean; message: string; remaining: number }> {
   try {
     // Get user's plan and current usage
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select(`
         plan_id,
@@ -168,6 +168,11 @@ async function checkUserLimits(userId: string): Promise<{ allowed: boolean; mess
       `)
       .eq('user_id', userId)
       .single();
+
+    if (profileError) {
+      console.error('Error fetching user profile:', profileError);
+      return { allowed: false, message: 'User profile not found', remaining: 0 };
+    }
 
     if (!profile) {
       return { allowed: false, message: 'User profile not found', remaining: 0 };
@@ -177,12 +182,17 @@ async function checkUserLimits(userId: string): Promise<{ allowed: boolean; mess
     const apiLimit = plan.api_call_limit;
 
     // Get current usage for this billing period
-    const { data: usage } = await supabase
+    const { data: usage, error: usageError } = await supabase
       .from('api_usage_tracking')
       .select('current_calls')
       .eq('user_id', userId)
       .gte('billing_period_end', new Date().toISOString())
       .single();
+
+    if (usageError && usageError.code !== 'PGRST116') {
+      console.error('Error fetching usage data:', usageError);
+      return { allowed: false, message: 'Error checking API limits', remaining: 0 };
+    }
 
     const currentCalls = usage?.current_calls || 0;
     const remaining = Math.max(0, apiLimit - currentCalls);
@@ -198,7 +208,7 @@ async function checkUserLimits(userId: string): Promise<{ allowed: boolean; mess
     return { allowed: true, message: 'Within limits', remaining };
   } catch (error) {
     console.error('Error checking user limits:', error);
-    return { allowed: false, message: 'Error checking API limits', remaining: 0 };
+    return { allowed: true, message: 'Error checking limits, allowing request', remaining: 999 };
   }
 }
 
