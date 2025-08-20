@@ -23,6 +23,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
   const [recommendations, setRecommendations] = useState<InvestmentRecommendation[]>([]);
   const [insights, setInsights] = useState<MarketInsight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [refreshCooldown, setRefreshCooldown] = useState(0);
   const [selectedTab, setSelectedTab] = useState<'ai-chat' | 'market-data' | 'recommendations' | 'insights'>('ai-chat');
   
