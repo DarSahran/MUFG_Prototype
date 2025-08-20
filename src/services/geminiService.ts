@@ -84,9 +84,21 @@ class GeminiService {
         // Strip markdown code blocks if present
         const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
         const parsed = JSON.parse(cleanText);
-        return parsed.recommendations || [];
+        
+        // Validate and transform the recommendations
+        const recommendations = parsed.recommendations || [];
+        return recommendations.map((rec: any) => ({
+          ...rec,
+          confidence: typeof rec.confidence === 'number' ? rec.confidence : parseFloat(rec.confidence) || 0,
+          targetPrice: rec.targetPrice ? parseFloat(rec.targetPrice) : undefined,
+          expectedReturn: rec.expectedReturn ? parseFloat(rec.expectedReturn) : undefined,
+          volatility: rec.volatility ? parseFloat(rec.volatility) : undefined,
+          recommendation: rec.recommendation || 'HOLD',
+          riskLevel: rec.riskLevel || 'MEDIUM',
+          timeHorizon: rec.timeHorizon || 'LONG'
+        }));
       } catch (parseError) {
-        console.error('Error parsing Gemini response:', parseError);
+        console.error('Error parsing Gemini response:', parseError, 'Raw text:', text);
         return this.getFallbackRecommendations(userProfile);
       }
     } catch (error) {
@@ -139,9 +151,18 @@ class GeminiService {
         // Strip markdown code blocks if present
         const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
         const parsed = JSON.parse(cleanText);
-        return parsed.insights || [];
+        
+        // Validate and transform the insights
+        const insights = parsed.insights || [];
+        return insights.map((insight: any) => ({
+          ...insight,
+          timestamp: insight.timestamp || new Date().toISOString(),
+          category: insight.category || 'MARKET_TREND',
+          importance: insight.importance || 'MEDIUM',
+          actionable: typeof insight.actionable === 'boolean' ? insight.actionable : false
+        }));
       } catch (parseError) {
-        console.error('Error parsing Gemini insights response:', parseError);
+        console.error('Error parsing Gemini insights response:', parseError, 'Raw text:', text);
         return this.getFallbackInsights();
       }
     } catch (error) {
@@ -199,7 +220,7 @@ class GeminiService {
         recommendation: 'BUY' as const,
         confidence: 85,
         reasoning: 'Broad Australian market exposure with low fees, suitable for long-term growth.',
-        targetPrice: 92.00,
+        targetPrice: 92.0,
         riskLevel: 'MEDIUM' as const,
         timeHorizon: 'LONG' as const,
         expectedReturn: 8.2,
@@ -212,7 +233,7 @@ class GeminiService {
         recommendation: 'BUY' as const,
         confidence: 88,
         reasoning: 'International diversification with exposure to global markets.',
-        targetPrice: 105.00,
+        targetPrice: 105.0,
         riskLevel: 'MEDIUM' as const,
         timeHorizon: 'LONG' as const,
         expectedReturn: 9.1,
@@ -225,7 +246,7 @@ class GeminiService {
         recommendation: 'HOLD' as const,
         confidence: 75,
         reasoning: 'Provides stability and income, good for defensive allocation.',
-        targetPrice: 52.00,
+        targetPrice: 52.0,
         riskLevel: 'LOW' as const,
         timeHorizon: 'MEDIUM' as const,
         expectedReturn: 4.2,
@@ -245,6 +266,7 @@ class GeminiService {
         recommendation: 'BUY' as const,
         confidence: 78,
         reasoning: 'Higher growth potential through emerging markets exposure.',
+        targetPrice: 45.5,
         riskLevel: 'HIGH' as const,
         timeHorizon: 'LONG' as const,
         expectedReturn: 10.5,
