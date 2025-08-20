@@ -12,7 +12,7 @@ interface StockQuoteResponse {
 }
 
 class CustomBackendAPI {
-  private baseUrl = 'https://mufg-hackathon-backend-qc1e7g9td-darsahrans-projects.vercel.app';
+  private baseUrl = 'https://mufg-hackathon-backend-q8zxhtuu6-darsahrans-projects.vercel.app';
   private cache = new Map<string, { data: StockQuoteResponse; timestamp: number }>();
   private readonly CACHE_DURATION = 30000; // 30 seconds
 
