@@ -81,14 +81,14 @@ export const AIAdvisorInterface: React.FC<AIAdvisorInterfaceProps> = ({ userProf
           portfolioValue,
           riskProfile: userProfile.riskTolerance,
           age: userProfile.age,
-          retirementAge: userProfile.retirementAge,
-          
-          // Refresh usage info after successful query
-          await fetchUsageInfo();
+          retirementAge: userProfile.retirementAge
         }
       });
 
       if (response) {
+        // Refresh usage info after successful query
+        await fetchUsageInfo();
+        
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),
           text: response.answer,
