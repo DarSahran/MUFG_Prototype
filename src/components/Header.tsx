@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, MessageCircle, BookOpen, BarChart3, LineChart, Briefcase, Calculator, Bot, Menu, X, RefreshCw } from 'lucide-react';
+import { TrendingUp, MessageCircle, BookOpen, BarChart3, LineChart, Briefcase, Calculator, Bot, Menu, X, RefreshCw, DollarSign } from 'lucide-react';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { UserProfile } from '../App';
 
@@ -27,6 +27,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, use
     { id: 'market', label: 'Market', icon: LineChart },    
     { id: 'forecasting', label: 'Forecasting', icon: Calculator },    
     { id: 'education', label: 'Learn', icon: BookOpen },
+    { id: 'pricing', label: 'Pricing', icon: DollarSign },
   ];
 
   const handleRefreshPortfolio = async () => {

@@ -823,7 +823,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
               <h4 className="text-sm sm:text-base font-bold text-white mb-3 sm:mb-4">Product</h4>
               <ul className="space-y-1 sm:space-y-2 text-slate-400 text-sm">
                 <li><a href="#" className="hover:text-white transition-colors duration-300 hover:translate-x-1 inline-block">Features</a></li>
-                <li><a href="#" className="hover:text-white transition-colors duration-300 hover:translate-x-1 inline-block">Pricing</a></li>
+                <li><button onClick={() => window.location.hash = 'pricing'} className="hover:text-white transition-colors duration-300 hover:translate-x-1 inline-block">Pricing</button></li>
                 <li><a href="#" className="hover:text-white transition-colors duration-300 hover:translate-x-1 inline-block">Security</a></li>
                 <li><a href="#" className="hover:text-white transition-colors duration-300 hover:translate-x-1 inline-block">API</a></li>
               </ul>

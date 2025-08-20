@@ -266,6 +266,96 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
         </button>
       </div>
       {showMonteCarlo && (
+
+        <div className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={monteCarloData.slice(0, 10)}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="year" stroke="#64748b" fontSize={12} />
+              <YAxis 
+                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
+                stroke="#64748b"
+                fontSize={12}
+              />
+              <Tooltip
+                formatter={(value: number, name: string) => [
+                  formatCurrency(value), 
+                  name === 'percentile50' ? 'Median Outcome' :
+                  name === 'percentile10' ? '10th Percentile' :
+                  name === 'percentile90' ? '90th Percentile' :
+                  name
+                ]}
+                labelFormatter={(label) => `Year: ${label}`}
+                contentStyle={{
+                  backgroundColor: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="percentile90"
+                stroke="#10b981"
+                fill="#10b981"
+                fillOpacity={0.1}
+              />
+              <Area
+                type="monotone"
+                dataKey="percentile10"
+                stroke="#ef4444"
+                fill="#ef4444"
+                fillOpacity={0.1}
+              />
+              <Line
+                type="monotone"
+                dataKey="percentile50"
+                stroke="#3b82f6"
+                strokeWidth={3}
+                dot={false}
+                name="Total Portfolio Value"
+              />
+              <Bar
+                dataKey="probabilityOfSuccess"
+                fill="#8b5cf6"
+                opacity={0.3}
+                yAxisId="right"
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+        
+      {/* Forecast Insights */}
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="p-4 bg-blue-50 rounded-lg">
+          <h4 className="font-semibold text-blue-900 mb-2">Scenario Analysis</h4>
+          <p className="text-sm text-blue-700">
+            {selectedScenario === 'conservative' ? 'Lower risk approach with steady, predictable growth' :
+             selectedScenario === 'moderate' ? 'Balanced strategy with moderate risk and solid returns' :
+             'Higher risk strategy targeting maximum long-term growth'}
+          </p>
+        </div>
+        
+        <div className="p-4 bg-green-50 rounded-lg">
+          <h4 className="font-semibold text-green-900 mb-2">Key Metrics</h4>
+          <div className="space-y-1 text-sm text-green-700">
+            <div>Expected Return: {scenarios[selectedScenario].return}%</div>
+            <div>Final Value: {formatCurrency(finalValue)}</div>
+            <div>Total Growth: {formatCurrency(totalGrowth)}</div>
+          </div>
+        </div>
+        
+        <div className="p-4 bg-purple-50 rounded-lg">
+          <h4 className="font-semibold text-purple-900 mb-2">Retirement Income</h4>
+          <div className="space-y-1 text-sm text-purple-700">
+            <div>Monthly Income: {formatCurrency(monthlyRetirementIncome)}</div>
+            <div>Goal Achievement: {goalAchievementProbability.toFixed(0)}%</div>
+            <div>Years to Goal: {customInputs.yearsToForecast}</div>
+          </div>
+        </div>
+      </div>
+=======
         <>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -353,6 +443,7 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
           </div>
         </>
       )}
+
     </div>
   );
 // ...existing code...
