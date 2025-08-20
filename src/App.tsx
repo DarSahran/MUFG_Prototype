@@ -16,9 +16,11 @@ import { CombinedAI } from './components/CombinedAI';
 import { AIRecommendations } from './components/AIRecommendations/AIRecommendations';
 import ProfilePage from './components/ProfilePage';
 import { PricingPage } from './components/PricingPage';
+import { SuccessPage } from './components/SuccessPage';
 
 import { useAuth } from './hooks/useAuth';
 import { useUserProfile } from './hooks/useUserProfile';
+import { useSubscription } from './hooks/useSubscription';
 
 export type UserProfile = {
   name: string;
@@ -47,13 +49,22 @@ export type UserProfile = {
 
 
 
-type View = 'landing' | 'onboarding' | 'dashboard' | 'combined-ai' | 'education' | 'login' | 'signup' | 'forgot' | 'profile' | 'market' | 'investments' | 'forecasting';
+type View = 'landing' | 'onboarding' | 'dashboard' | 'combined-ai' | 'education' | 'login' | 'signup' | 'forgot' | 'profile' | 'market' | 'investments' | 'forecasting' | 'pricing' | 'success';
 
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('landing');
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading, createProfile } = useUserProfile();
+  const { subscription, getSubscriptionPlan } = useSubscription();
+
+  // Check URL for success page
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('session_id')) {
+      setCurrentView('success');
+    }
+  }, []);
 
   // Auth navigation handlers
   const handleSwitchToLogin = () => setCurrentView('login');
@@ -157,6 +168,8 @@ function App() {
         return <ProfilePage userProfile={userProfile} />;
       case 'pricing':
         return <PricingPage />;
+      case 'success':
+        return <SuccessPage />;
       default:
         return <EnhancedDashboard userProfile={userProfile} />;
     }
@@ -168,6 +181,8 @@ function App() {
         currentView={currentView as Exclude<View, 'landing' | 'login' | 'signup' | 'forgot'>}
         setCurrentView={setCurrentView as any}
         userProfile={userProfile}
+        subscription={subscription}
+        subscriptionPlan={getSubscriptionPlan()}
       />
       <main className="pt-16">
         {renderCurrentView()}
