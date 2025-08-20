@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { TrendingUp, DollarSign, Target, AlertCircle, Star, RefreshCw, MessageCircle, BarChart3, PieChart, Calculator, Activity, ThumbsUp, ThumbsDown, Bot } from 'lucide-react';
 import { AIAdvisorInterface } from './AIAdvisor/AIAdvisorInterface';
+import { SerperChatInterface } from './SerperAIChat/SerperChatInterface';
 import { RealTimeMarketDashboard } from './MarketData/RealTimeMarketDashboard';
 import { serperService, InvestmentRecommendation, MarketInsight } from '../services/serperService';
 import { customBackendAPI } from '../services/customBackendAPI';
@@ -363,7 +364,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
           )}
           
           <div className="p-4 sm:p-6">
-            {selectedTab === 'ai-chat' && <AIAdvisorInterface userProfile={userProfile} />}
+            {selectedTab === 'ai-chat' && <SerperChatInterface userProfile={userProfile} />}
             {selectedTab === 'market-data' && <RealTimeMarketDashboard userProfile={userProfile} />}
             {selectedTab === 'recommendations' && renderRecommendations()}
             {selectedTab === 'insights' && renderInsights()}

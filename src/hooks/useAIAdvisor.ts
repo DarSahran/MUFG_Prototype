@@ -46,10 +46,10 @@ export const useAIAdvisor = () => {
       return null;
     }
 
-    // Check if user can make request based on plan limits
-    const canMakeRequest = await checkRequestPermission();
-    if (!canMakeRequest) {
-      setError('Request limit exceeded for your plan. Please upgrade or wait for reset.');
+    // Check minimum time between requests (30 seconds)
+    const timeSinceLastRequest = Date.now() - lastRequestTime;
+    if (timeSinceLastRequest < 30000) {
+      setError(`Please wait ${Math.ceil((30000 - timeSinceLastRequest) / 1000)} seconds between queries.`);
       return null;
     }
 
@@ -63,13 +63,17 @@ export const useAIAdvisor = () => {
         throw new Error('No valid session found');
       }
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-advisor`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serper-ai-chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify(queryData),
+        body: JSON.stringify({
+          query: queryData.query,
+          context: queryData.context,
+          searchType: 'search'
+        }),
       });
 
       const result = await response.json();
@@ -82,10 +86,15 @@ export const useAIAdvisor = () => {
         throw new Error(result.error || 'Failed to get AI response');
       }
 
-      // Update usage info after successful query
-      await fetchUsageInfo();
-
-      return result as AIResponse;
+      return {
+        answer: result.answer,
+        marketAnalysis: '',
+        recommendations: [],
+        riskAssessment: '',
+        sources: result.sources || [],
+        confidence: result.confidence,
+        queryType: result.queryType
+      } as AIResponse;
     } catch (err: any) {
       console.error('AI Advisor error:', err);
       setError(err.message || 'Failed to get AI response');
