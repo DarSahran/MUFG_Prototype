@@ -1,92 +1,30 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, TrendingUp, DollarSign, Target, AlertCircle, Star, RefreshCw, MessageCircle, ThumbsUp, ThumbsDown, Lightbulb, BarChart3, PieChart, Calculator } from 'lucide-react';
+import { TrendingUp, DollarSign, Target, AlertCircle, Star, RefreshCw, MessageCircle, BarChart3, PieChart, Calculator } from 'lucide-react';
+import { AIAdvisorInterface } from './AIAdvisor/AIAdvisorInterface';
+import { RealTimeMarketDashboard } from './MarketData/RealTimeMarketDashboard';
 import { serperService, InvestmentRecommendation, MarketInsight } from '../services/serperService';
 import { marketDataService } from '../services/marketData';
 import { usePortfolio } from '../hooks/usePortfolio';
-import { calculationEngine } from '../utils/portfolioEngine';
-import { apiRateLimiter } from '../utils/apiRateLimiter';
+import { useAIAdvisor } from '../hooks/useAIAdvisor';
 import { UserProfile } from '../App';
 
 interface CombinedAIProps {
   userProfile: UserProfile;
 }
 
-interface Message {
-  id: string;
-  text: string;
-  sender: 'user' | 'ai';
-  timestamp: Date;
-  suggestions?: string[];
-  attachments?: {
-    type: 'chart' | 'calculation' | 'recommendation';
-    data: any;
-  }[];
-}
-
 export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
-  const { holdings, getTotalPortfolioValue } = usePortfolio();
+  const { usageInfo } = useAIAdvisor();
+  const { getTotalPortfolioValue } = usePortfolio();
   
-  // Chat State
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: `Hello ${userProfile?.name}! I'm your AI Investment Advisor. I can help you optimize your superannuation strategy, analyze market trends, and answer any investment questions you have. What would you like to know?`,
-      sender: 'ai',
-      timestamp: new Date(),
-      suggestions: [
-        'How can I maximize my retirement savings?',
-        'Should I increase my risk tolerance?',
-        'What are the best performing investment options?',
-        'How much should I contribute monthly?'
-      ]
-    }
-  ]);
-  const [inputText, setInputText] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [contextData, setContextData] = useState<any>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
   // Recommendations/Insights State
   const [recommendations, setRecommendations] = useState<InvestmentRecommendation[]>([]);
   const [insights, setInsights] = useState<MarketInsight[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshCooldown, setRefreshCooldown] = useState(0);
-  const [rateLimitInfo, setRateLimitInfo] = useState({ remaining: 10, queueLength: 0 });
-  const [selectedTab, setSelectedTab] = useState<'recommendations' | 'insights' | 'chat'>('recommendations');
+  const [selectedTab, setSelectedTab] = useState<'ai-chat' | 'market-data' | 'recommendations' | 'insights'>('ai-chat');
   
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Load user context data
-  useEffect(() => {
-    const loadContextData = async () => {
-      try {
-        const portfolioValue = getTotalPortfolioValue();
-        const projections = calculationEngine.calculatePortfolioProjections(
-          holdings, 
-          userProfile.monthlyContribution, 
-          userProfile.retirementAge - userProfile.age
-        );
-        
-        setContextData({
-          portfolioValue,
-          projections,
-          holdings: holdings.length,
-          yearsToRetirement: userProfile.retirementAge - userProfile.age
-        });
-      } catch (error) {
-        console.error('Error loading context data:', error);
-      }
-    };
-    
-    loadContextData();
-  }, [holdings, userProfile]);
-
-  // Chat scroll
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-  useEffect(() => { scrollToBottom(); }, [messages]);
 
   // Load AI Data and setup cooldown
   useEffect(() => { 
@@ -132,13 +70,6 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
     }, 1000);
   };
 
-  const updateRateLimitInfo = () => {
-    setRateLimitInfo({
-      remaining: apiRateLimiter.getRemainingRequests(),
-      queueLength: apiRateLimiter.getQueueLength(),
-    });
-  };
-  
   const loadAIData = async (forceRefresh = false) => {
     // Check cooldown unless forced
     if (!forceRefresh && refreshCooldown > 0) {
@@ -147,7 +78,6 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
     }
 
     setLoading(true);
-    updateRateLimitInfo();
     
     try {
       // Set cooldown immediately when refresh starts
@@ -177,7 +107,6 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
       setRecommendations(aiRecommendations);
       setInsights(aiInsights);
       
-      updateRateLimitInfo();
     } catch (error) {
       console.error('Error loading AI data:', error);
       
@@ -189,132 +118,6 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
       setLoading(false);
     }
   };
-
-  // Chat logic
-  const simulateAIResponse = (userMessage: string): { text: string; attachments?: any[] } => {
-    const message = userMessage.toLowerCase();
-    
-    // Context-aware responses using actual user data
-    if (message.includes('maximize') || message.includes('increase') || message.includes('savings')) {
-      const currentValue = contextData?.portfolioValue || userProfile.currentSuper;
-      const projectedIncrease = Math.round(300 * 12 * contextData?.yearsToRetirement * 1.075);
-      
-      return {
-        text: `Based on your ${userProfile?.riskTolerance} risk profile and ${contextData?.yearsToRetirement || 35} years to retirement, I recommend:\n\n1. **Increase Contributions**: Boost your monthly contribution by $200-300. This could add $${projectedIncrease.toLocaleString()}+ to your retirement balance.\n\n2. **Current Portfolio**: Your ${contextData?.holdings || 0} holdings worth $${currentValue.toLocaleString()} show good diversification.\n\n3. **Salary Sacrifice**: Use pre-tax contributions to maximize tax benefits - potentially saving you $1,200 annually.\n\n4. **Asset Allocation**: With your timeframe, consider increasing growth assets to 70-75% for higher long-term returns.\n\nWould you like me to run a detailed projection with these changes?`,
-        attachments: [{
-          type: 'calculation',
-          data: {
-            currentContribution: userProfile.monthlyContribution,
-            recommendedContribution: userProfile.monthlyContribution + 250,
-            projectedIncrease,
-            timeframe: contextData?.yearsToRetirement
-          }
-        }]
-      };
-    }
-    
-    if (message.includes('risk') || message.includes('tolerance')) {
-      return {
-        text: `Your current ${userProfile?.riskTolerance} risk profile suits your ${contextData?.yearsToRetirement}-year investment horizon well. Here's what this means:\n\n**Current Portfolio Analysis:**\n- Total Value: $${(contextData?.portfolioValue || 0).toLocaleString()}\n- Holdings: ${contextData?.holdings || 0} different assets\n- Diversification: Good spread across asset classes\n\n**Risk Assessment:**\nGiven your age (${userProfile?.age}) and time to retirement, you might benefit from a slightly more growth-oriented approach. This could potentially increase your retirement balance by 15-20%.\n\n**Risk vs. Reward:**\n- Higher risk = potential for $75,000+ more at retirement\n- Lower risk = more predictable but potentially smaller returns\n\nWould you like me to model different risk scenarios for your specific situation?`,
-        attachments: [{
-          type: 'chart',
-          data: {
-            riskProfile: userProfile.riskTolerance,
-            currentAllocation: contextData?.portfolioValue,
-            recommendedChanges: ['Increase international exposure', 'Reduce cash holdings']
-          }
-        }]
-      };
-    }
-    
-    if (message.includes('contribute') || message.includes('monthly') || message.includes('much')) {
-      const current = userProfile?.monthlyContribution || 500;
-      const recommended = Math.round(current * 1.4);
-      const difference = recommended - current;
-      const projectedIncrease = Math.round(difference * 12 * contextData?.yearsToRetirement * 1.07);
-      
-      return {
-        text: `Based on your goals and current portfolio value of $${(contextData?.portfolioValue || userProfile.currentSuper).toLocaleString()}, here's my analysis:\n\n**Current Contribution:** $${current}/month\n**Recommended:** $${recommended}/month (+$${difference})\n\n**Impact of Increase:**\n- Additional retirement savings: ~$${projectedIncrease.toLocaleString()}\n- Tax benefits: Save ~$${Math.round(difference * 12 * 0.15)}/year\n- Retirement income boost: +$${Math.round(projectedIncrease * 0.04 / 12)}/month\n\n**Ways to Increase:**\n1. Salary sacrifice (pre-tax)\n2. After-tax contributions\n3. Government co-contributions (if eligible)\n\nShould I help you calculate the optimal contribution strategy?`,
-        attachments: [{
-          type: 'calculation',
-          data: {
-            current,
-            recommended,
-            difference,
-            projectedIncrease,
-            taxSavings: Math.round(difference * 12 * 0.15)
-          }
-        }]
-      };
-    }
-    
-    return {
-      text: `I understand you're asking about "${message}". Based on your profile:\n\n- Current Portfolio: $${(contextData?.portfolioValue || userProfile.currentSuper).toLocaleString()}\n- Holdings: ${contextData?.holdings || 0} different assets\n- Risk Profile: ${userProfile?.riskTolerance}\n- Years to Retirement: ${contextData?.yearsToRetirement || 35}\n\nLet me provide personalized advice. The investment landscape offers many opportunities for optimization, from asset allocation adjustments to contribution strategies and tax-effective structures.\n\nCould you be more specific about what aspect of your investment strategy you'd like to focus on? I can provide detailed analysis on portfolio performance, risk management, or retirement income projections.`
-    };
-  };
-
-  const handleSendMessage = async (text: string) => {
-    if (!text.trim()) return;
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text,
-      sender: 'user',
-      timestamp: new Date()
-    };
-    setMessages(prev => [...prev, userMessage]);
-    setInputText('');
-    setIsTyping(true);
-    setTimeout(() => {
-      const response = simulateAIResponse(text);
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        text: response.text,
-        sender: 'ai',
-        timestamp: new Date(),
-        attachments: response.attachments,
-        suggestions: [
-          'Tell me more about this strategy',
-          'Show me the calculations',
-          'What are the risks?',
-          'Compare with other options'
-        ]
-      };
-      setMessages(prev => [...prev, aiResponse]);
-      setIsTyping(false);
-    }, 1500);
-  };
-
-  const handleSuggestionClick = (suggestion: string) => {
-    handleSendMessage(suggestion);
-  };
-
-  // Enhanced Quick Actions with real data
-  const quickActions = [
-    { 
-      icon: TrendingUp, 
-      text: `Analyze my ${contextData?.holdings || 0} holdings`, 
-      color: 'bg-blue-500',
-      action: () => handleSendMessage(`Please analyze my current ${contextData?.holdings || 0} holdings worth $${(contextData?.portfolioValue || 0).toLocaleString()}`)
-    },
-    { 
-      icon: DollarSign, 
-      text: `Optimize my $${userProfile.monthlyContribution}/month contributions`, 
-      color: 'bg-green-500',
-      action: () => handleSendMessage(`How can I optimize my monthly contributions of $${userProfile.monthlyContribution}?`)
-    },
-    { 
-      icon: Target, 
-      text: `Plan for retirement in ${contextData?.yearsToRetirement || 35} years`, 
-      color: 'bg-purple-500',
-      action: () => handleSendMessage(`Help me plan for retirement in ${contextData?.yearsToRetirement || 35} years`)
-    },
-    { 
-      icon: AlertCircle, 
-      text: `Review my ${userProfile.riskTolerance} risk strategy`, 
-      color: 'bg-orange-500',
-      action: () => handleSendMessage(`Is my ${userProfile.riskTolerance} risk tolerance appropriate for my situation?`)
-    },
-  ];
 
   // UI helpers
   const getRiskColor = (risk: string) => {
@@ -335,7 +138,6 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
     }
   };
 
-  // Renderers
   const renderRecommendations = () => (
     <div className="space-y-6">
       {loading ? (
@@ -469,182 +271,6 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
     </div>
   );
 
-  const renderChat = () => (
-    <div className="space-y-6">
-      {/* Quick Actions */}
-      {messages.length <= 1 && (
-        <div className="p-4 sm:p-6 border-b border-slate-200">
-          <h3 className="text-xs sm:text-sm font-medium text-slate-700 mb-3">Quick Actions</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-            {quickActions.map((action, index) => {
-              const Icon = action.icon;
-              return (
-                <button
-                  key={index}
-                  onClick={action.action || (() => handleSendMessage(action.text))}
-                  className="flex flex-col items-center p-2 sm:p-3 rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200"
-                >
-                  <div className={`p-1.5 sm:p-2 rounded-lg ${action.color} mb-2`}>
-                    <Icon className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-[10px] sm:text-xs text-slate-700 text-center leading-tight">{action.text}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-      
-      {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6" style={{ maxHeight: window.innerWidth < 640 ? 300 : 400 }}>
-        {messages.map((message) => (
-          <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} max-w-full`}>
-            <div className={`flex max-w-full sm:max-w-3xl ${message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-              <div className={`flex-shrink-0 ${message.sender === 'user' ? 'ml-3' : 'mr-3'}`}>
-                <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${
-                  message.sender === 'user' 
-                    ? 'bg-blue-600' 
-                    : 'bg-gradient-to-br from-green-500 to-blue-600'
-                }`}>
-                  {message.sender === 'user' ? (
-                    <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                  ) : (
-                    <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                  )}
-                </div>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className={`p-3 sm:p-4 rounded-lg ${
-                  message.sender === 'user'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-100 text-slate-900'
-                }`}>
-                  <p className="whitespace-pre-line text-sm sm:text-base break-words">{message.text}</p>
-                </div>
-                
-                {/* Message Attachments */}
-                {message.attachments && message.attachments.map((attachment, index) => (
-                  <div key={index} className="mt-3 p-4 bg-white border border-slate-200 rounded-lg shadow-sm">
-                    {attachment.type === 'calculation' && (
-                      <div>
-                        <div className="flex items-center space-x-2 mb-3">
-                          <Calculator className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm font-medium text-slate-900">Calculation Details</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          {Object.entries(attachment.data).map(([key, value]) => (
-                            <div key={key} className="flex justify-between">
-                              <span className="text-slate-600 capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
-                              <span className="font-medium">{typeof value === 'number' ? `$${value.toLocaleString()}` : value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {attachment.type === 'chart' && (
-                      <div>
-                        <div className="flex items-center space-x-2 mb-3">
-                          <BarChart3 className="w-4 h-4 text-green-600" />
-                          <span className="text-sm font-medium text-slate-900">Portfolio Analysis</span>
-                        </div>
-                        <div className="text-sm text-slate-600">
-                          Interactive chart data would be displayed here
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                
-                {message.suggestions && (
-                  <div className="mt-2 sm:mt-3 flex flex-wrap gap-1 sm:gap-2">
-                    {message.suggestions.map((suggestion, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleSuggestionClick(suggestion)}
-                        className="px-2 sm:px-3 py-1 text-[10px] sm:text-xs bg-white border border-slate-300 text-slate-700 rounded-full hover:bg-slate-50 transition-colors duration-200"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-        {isTyping && (
-          <div className="flex justify-start">
-            <div className="flex">
-              <div className="mr-2 sm:mr-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center">
-                  <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                </div>
-              </div>
-              <div className="bg-slate-100 p-3 sm:p-4 rounded-lg">
-                <div className="flex space-x-2">
-                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-      
-      {/* Chat Input */}
-      <div className="border-t border-slate-200 p-4 sm:p-6">
-        {/* Smart Suggestions */}
-        {inputText.length === 0 && (
-          <div className="mb-4">
-            <div className="flex items-center space-x-2 mb-2">
-              <Lightbulb className="w-4 h-4 text-yellow-500" />
-              <span className="text-xs font-medium text-slate-700">Smart Suggestions</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {[
-                'What if I retire 5 years early?',
-                'Should I rebalance my portfolio?',
-                'How much will I have at retirement?',
-                'Compare my performance to benchmarks'
-              ].map((suggestion, index) => (
-                <button
-                  key={index}
-                  onClick={() => setInputText(suggestion)}
-                  className="px-3 py-1 text-xs bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition-colors"
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        <div className="flex space-x-2 sm:space-x-4">
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(inputText)}
-            placeholder="Ask me about your investment strategy..."
-            className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-          />
-          <button
-            onClick={() => handleSendMessage(inputText)}
-            disabled={!inputText.trim() || isTyping}
-            className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg hover:from-blue-700 hover:to-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Send className="w-5 h-5" />
-          </button>
-        </div>
-        <p className="text-[10px] sm:text-xs text-slate-500 mt-2 text-center">
-          AI responses are educational and not personalized financial advice. Consult a licensed advisor for specific guidance.
-        </p>
-      </div>
-    </div>
-  );
-
   // Main Render
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6 xl:px-8">
@@ -655,15 +281,12 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
             <div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">AI Investment Advisor</h1>
               <p className="text-sm sm:text-base text-slate-600">
-                Personalized recommendations for your $${(contextData?.portfolioValue || 0).toLocaleString()} portfolio
+                Personalized recommendations for your ${getTotalPortfolioValue().toLocaleString()} portfolio
               </p>
-              {rateLimitInfo.remaining < 5 && (
+              {usageInfo && usageInfo.remaining < 5 && (
                 <div className="mt-2 flex items-center space-x-2 text-xs text-orange-600">
                   <AlertCircle className="w-4 h-4" />
-                  <span>API requests remaining: {rateLimitInfo.remaining}</span>
-                  {rateLimitInfo.queueLength > 0 && (
-                    <span>• {rateLimitInfo.queueLength} queued</span>
-                  )}
+                  <span>AI queries remaining: {usageInfo.remaining}/{usageInfo.limit}</span>
                 </div>
               )}
             </div>
@@ -688,9 +311,10 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
           <div className="border-b border-slate-200">
             <nav className="flex space-x-4 sm:space-x-6 lg:space-x-8 px-4 sm:px-6 overflow-x-auto">
               {[
+                { id: 'ai-chat', label: 'AI Chat', icon: MessageCircle },
+                { id: 'market-data', label: 'Live Market', icon: Activity },
                 { id: 'recommendations', label: 'Recommendations', icon: TrendingUp },
                 { id: 'insights', label: 'Market Insights', icon: AlertCircle },
-                { id: 'chat', label: 'AI Chat', icon: MessageCircle }
               ].map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -711,25 +335,24 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
             </nav>
           </div>
           
-          {/* Rate Limit Status */}
-          {(rateLimitInfo.remaining < 5 || rateLimitInfo.queueLength > 0) && (
-            <div className="px-6 py-3 bg-orange-50 border-t border-orange-200">
+          {/* Usage Status */}
+          {usageInfo && usageInfo.remaining < 10 && (
+            <div className="px-6 py-3 bg-blue-50 border-t border-blue-200">
               <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-2 text-orange-700">
+                <div className="flex items-center space-x-2 text-blue-700">
                   <AlertCircle className="w-4 h-4" />
-                  <span>API Rate Limit: {rateLimitInfo.remaining}/10 requests remaining</span>
+                  <span>AI Queries: {usageInfo.remaining}/{usageInfo.limit} remaining this month</span>
                 </div>
-                {rateLimitInfo.queueLength > 0 && (
-                  <span className="text-orange-600">{rateLimitInfo.queueLength} requests queued</span>
-                )}
+                <span className="text-blue-600">{usageInfo.planName} Plan</span>
               </div>
             </div>
           )}
           
           <div className="p-4 sm:p-6">
+            {selectedTab === 'ai-chat' && <AIAdvisorInterface userProfile={userProfile} />}
+            {selectedTab === 'market-data' && <RealTimeMarketDashboard userProfile={userProfile} />}
             {selectedTab === 'recommendations' && renderRecommendations()}
             {selectedTab === 'insights' && renderInsights()}
-            {selectedTab === 'chat' && renderChat()}
           </div>
         </div>
       </div>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Activity, BarChart3, LineChart, PieChart, RefreshCw, Download, Filter, Globe, AlertCircle, Star, Bell, Target } from 'lucide-react';
 import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart as RechartsPieChart, Cell } from 'recharts';
+import { RealTimeMarketDashboard } from './MarketData/RealTimeMarketDashboard';
+import { usePlanAccess } from '../hooks/usePlanAccess';
 import { marketDataService } from '../services/marketData';
 
 interface StockData {
@@ -25,6 +27,7 @@ interface MarketTrendsProps {
 }
 
 export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
+  const { userPlan, checkFeatureAccess } = usePlanAccess();
   const [selectedAssets, setSelectedAssets] = useState<string[]>(['VAS.AX', 'VGS.AX', 'VAF.AX']);
   const [chartType, setChartType] = useState<'line' | 'area' | 'bar'>('area');
   const [timeframe, setTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | '1Y'>('1M');
@@ -34,6 +37,7 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
   const [selectedView, setSelectedView] = useState<'overview' | 'detailed' | 'comparison'>('overview');
   const [marketAlerts, setMarketAlerts] = useState<any[]>([]);
   const [watchlist, setWatchlist] = useState<string[]>(['VAS.AX', 'VGS.AX', 'VAF.AX']);
+  const [showRealtimeDashboard, setShowRealtimeDashboard] = useState(false);
 
   const availableAssets = [
     { symbol: 'VAS.AX', name: 'Vanguard Australian Shares Index ETF', category: 'Australian Equity', color: '#3B82F6' },
@@ -51,6 +55,11 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
   useEffect(() => {
     loadMarketData();
     loadMarketAlerts();
+    
+    // Show realtime dashboard if user has access
+    if (checkFeatureAccess('realtimeAccess')) {
+      setShowRealtimeDashboard(true);
+    }
   }, [selectedAssets, timeframe]);
 
   const loadMarketData = async () => {
@@ -757,20 +766,25 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
             <div className="flex flex-wrap gap-1 sm:gap-2">
               {[
                 { id: 'overview', label: 'Overview', icon: BarChart3 },
+                { id: 'realtime', label: 'Real-Time', icon: Activity },
                 { id: 'detailed', label: 'Detailed', icon: LineChart },
                 { id: 'comparison', label: 'Comparison', icon: PieChart }
               ].map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
                   onClick={() => setSelectedView(id as any)}
+                  disabled={id === 'realtime' && !checkFeatureAccess('realtimeAccess')}
                   className={`flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
                     selectedView === id
                       ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
                   <span>{label}</span>
+                  {id === 'realtime' && !checkFeatureAccess('realtimeAccess') && (
+                    <Star className="w-3 h-3 text-yellow-500" />
+                  )}
                 </button>
               ))}
             </div>
@@ -793,6 +807,21 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
         </div>
 
         {/* Content */}
+        {selectedView === 'realtime' && checkFeatureAccess('realtimeAccess') && (
+          <RealTimeMarketDashboard userProfile={userProfile} />
+        )}
+        {selectedView === 'realtime' && !checkFeatureAccess('realtimeAccess') && (
+          <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+            <Star className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Real-Time Data Requires Upgrade</h3>
+            <p className="text-slate-600 mb-6">
+              Get live market updates, real-time price feeds, and instant portfolio tracking with a premium plan.
+            </p>
+            <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              Upgrade to Pro
+            </button>
+          </div>
+        )}
         {selectedView === 'overview' && renderOverview()}
         {selectedView === 'detailed' && renderDetailed()}
         {selectedView === 'comparison' && renderComparison()}
