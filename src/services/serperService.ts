@@ -262,7 +262,7 @@ class SerperService {
     
     newsItems.slice(0, 4).forEach((newsItem: any, index: number) => {
       const importance = this.determineImportanceFromTitle(newsItem.title);
-      const category = this.categorizeMar ketInsight(newsItem.title, newsItem.snippet);
+      const category = this.categorizeMarketInsight(newsItem.title, newsItem.snippet);
       
       insights.push({
         title: newsItem.title,
