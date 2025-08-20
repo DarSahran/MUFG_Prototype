@@ -81,7 +81,9 @@ class GeminiService {
       const text = response.text();
 
       try {
-        const parsed = JSON.parse(text);
+        // Strip markdown code blocks if present
+        const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
+        const parsed = JSON.parse(cleanText);
         return parsed.recommendations || [];
       } catch (parseError) {
         console.error('Error parsing Gemini response:', parseError);
@@ -134,7 +136,9 @@ class GeminiService {
       const text = response.text();
 
       try {
-        const parsed = JSON.parse(text);
+        // Strip markdown code blocks if present
+        const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
+        const parsed = JSON.parse(cleanText);
         return parsed.insights || [];
       } catch (parseError) {
         console.error('Error parsing Gemini insights response:', parseError);
