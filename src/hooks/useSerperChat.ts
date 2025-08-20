@@ -164,6 +164,7 @@ export const useSerperChat = () => {
     askSerperAI,
     loading,
     error,
+    setError,
     planDetails,
     fetchPlanDetails,
     canMakeQuery,

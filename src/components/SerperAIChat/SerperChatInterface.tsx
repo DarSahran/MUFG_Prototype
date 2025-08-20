@@ -26,7 +26,7 @@ interface SerperChatInterfaceProps {
 }
 
 export const SerperChatInterface: React.FC<SerperChatInterfaceProps> = ({ userProfile }) => {
-  const { askSerperAI, loading, error, planDetails, fetchPlanDetails, canMakeQuery, getUsageMessage, getTimeUntilReset } = useSerperChat();
+  const { askSerperAI, loading, error, setError, planDetails, fetchPlanDetails, canMakeQuery, getUsageMessage, getTimeUntilReset } = useSerperChat();
   const { getTotalPortfolioValue } = usePortfolio();
   const [messages, setMessages] = useState<Message[]>([
     {
