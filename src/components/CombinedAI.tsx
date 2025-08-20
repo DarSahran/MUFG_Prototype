@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, TrendingUp, DollarSign, Target, AlertCircle, Star, RefreshCw, MessageCircle, ThumbsUp, ThumbsDown, Lightbulb, BarChart3, PieChart, Calculator } from 'lucide-react';
-import { geminiService, InvestmentRecommendation, MarketInsight } from '../services/geminiService';
+import { serperService, InvestmentRecommendation, MarketInsight } from '../services/serperService';
 import { marketDataService } from '../services/marketData';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { calculationEngine } from '../utils/portfolioEngine';
@@ -171,8 +171,8 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
             marketDataService.getMockStockData('VGE.AX'),
           ];
       const [aiRecommendations, aiInsights] = await Promise.all([
-        geminiService.getInvestmentRecommendations(userProfile, validMarketData),
-        geminiService.getMarketInsights(validMarketData, userProfile)
+        serperService.getInvestmentRecommendations(userProfile, validMarketData),
+        serperService.getMarketInsights(validMarketData, userProfile)
       ]);
       setRecommendations(aiRecommendations);
       setInsights(aiInsights);

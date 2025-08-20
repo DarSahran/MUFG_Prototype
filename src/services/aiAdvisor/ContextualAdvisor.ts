@@ -1,15 +1,10 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { serperService } from '../serperService';
 import { UnifiedAsset, AIRecommendation } from '../../types/portfolioTypes';
 import { UserProfile } from '../../App';
 
 export class ContextualAdvisor {
-  private geminiClient: GoogleGenerativeAI;
-  private model: any;
-
   constructor() {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || 'demo-key';
-    this.geminiClient = new GoogleGenerativeAI(apiKey);
-    this.model = this.geminiClient.getGenerativeModel({ model: 'gemini-pro' });
+    // Serper service is used for market research and analysis
   }
 
   async analyzePortfolio(
@@ -19,11 +14,15 @@ export class ContextualAdvisor {
   ): Promise<string> {
     try {
       const context = this.buildContext(portfolio, userProfile);
-      const prompt = this.buildAnalysisPrompt(context, question);
+      const searchQuery = this.buildSearchQuery(context, question);
       
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      return response.text();
+      const answer = await serperService.answerFinancialQuestion(
+        searchQuery, 
+        userProfile, 
+        JSON.stringify(context)
+      );
+      
+      return answer;
     } catch (error) {
       console.error('Error analyzing portfolio:', error);
       return this.getFallbackAnalysis(portfolio, userProfile);
@@ -35,19 +34,17 @@ export class ContextualAdvisor {
     userProfile: UserProfile
   ): Promise<AIRecommendation[]> {
     try {
-      const context = this.buildContext(portfolio, userProfile);
-      const prompt = this.buildRecommendationPrompt(context);
+      const recommendations = await serperService.getInvestmentRecommendations(
+        userProfile,
+        portfolio.map(asset => ({
+          symbol: asset.symbol,
+          price: asset.currentPrice,
+          changePercent: 0, // Would be calculated from real data
+          volume: 0
+        }))
+      );
       
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      try {
-        const parsed = JSON.parse(text);
-        return parsed.recommendations || [];
-      } catch (parseError) {
-        return this.getFallbackRecommendations(portfolio, userProfile);
-      }
+      return recommendations;
     } catch (error) {
       console.error('Error generating recommendations:', error);
       return this.getFallbackRecommendations(portfolio, userProfile);
@@ -76,68 +73,16 @@ export class ContextualAdvisor {
     };
   }
 
-  private buildAnalysisPrompt(context: any, question?: string): string {
-    return `
-      As a professional financial advisor specializing in Australian investments, analyze this portfolio:
-
-      Portfolio Context:
-      - Total Value: $${context.totalValue.toLocaleString()}
-      - Asset Count: ${context.assetCount}
-      - Diversification Score: ${context.diversificationScore}/100
-      - Risk Profile: ${context.riskProfile}
-      - Years to Retirement: ${context.yearsToRetirement}
-      - Monthly Contribution: $${context.monthlyContribution}
-      - Annual Income: $${context.annualIncome}
-
-      Asset Allocation:
-      ${Object.entries(context.allocation).map(([type, percentage]) => 
-        `- ${type}: ${percentage.toFixed(1)}%`
-      ).join('\n')}
-
-      ${question ? `Specific Question: ${question}` : ''}
-
-      Provide a comprehensive analysis covering:
-      1. Portfolio strengths and weaknesses
-      2. Risk assessment for the user's profile
-      3. Diversification analysis
-      4. Specific actionable recommendations
-      5. Tax optimization opportunities
-      6. Timeline considerations
-
-      Keep the response conversational but professional, and reference specific numbers from the portfolio.
-    `;
-  }
-
-  private buildRecommendationPrompt(context: any): string {
-    return `
-      Generate 4-6 specific investment recommendations for this portfolio in JSON format:
-
-      Portfolio Context:
-      - Total Value: $${context.totalValue.toLocaleString()}
-      - Risk Profile: ${context.riskProfile}
-      - Years to Retirement: ${context.yearsToRetirement}
-      - Region: ${context.region}
-      - Current Allocation: ${JSON.stringify(context.allocation)}
-
-      Return JSON in this format:
-      {
-        "recommendations": [
-          {
-            "id": "rec-1",
-            "title": "Increase International Exposure",
-            "description": "Add 10% international ETFs for better diversification",
-            "confidence": 85,
-            "reasoning": "Current portfolio lacks international diversification...",
-            "action": "Add VGS.AX or similar international ETF",
-            "impact": "+$45,000 at retirement",
-            "priority": "high",
-            "category": "allocation"
-          }
-        ]
-      }
-
-      Focus on actionable recommendations specific to Australian investors.
-    `;
+  private buildSearchQuery(context: any, question?: string): string {
+    let query = `Australian superannuation investment advice ${context.riskProfile} risk`;
+    
+    if (question) {
+      query = `${question} ${query}`;
+    } else {
+      query += ` portfolio optimization ${context.yearsToRetirement} years retirement`;
+    }
+    
+    return query;
   }
 
   private calculateAllocation(portfolio: UnifiedAsset[]): { [key: string]: number } {
