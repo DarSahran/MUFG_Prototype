@@ -16,26 +16,24 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, onSwitchToSignup, 
   })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setError(null)
-    setSuccess(false)
+    setMessage(null)
 
     const { data, error } = await signIn(formData.email, formData.password)
     if (error) {
       if (error.message.includes('Invalid login credentials')) {
-        setError('Incorrect email or password.');
+        setMessage({ type: 'error', text: 'Incorrect email or password.' });
       } else if (error.message.includes('Email not confirmed')) {
-        setError('Please confirm your email before logging in.');
+        setMessage({ type: 'error', text: 'Please confirm your email before logging in.' });
       } else {
-        setError(error.message)
+        setMessage({ type: 'error', text: error.message });
       }
     } else {
-      setSuccess(true)
+      setMessage({ type: 'success', text: 'Login successful! Redirecting...' });
       // Optionally, redirect or reload here
       window.location.reload();
     }
@@ -74,14 +72,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, onSwitchToSignup, 
         {/* Login Form */}
         <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 border border-slate-200">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-700 text-xs sm:text-sm">{error}</p>
-              </div>
-            )}
-            {success && (
-              <div className="p-3 sm:p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-green-700 text-xs sm:text-sm">Login successful! Redirecting...</p>
+            {message && (
+              <div className={`p-3 sm:p-4 border rounded-lg ${
+                message.type === 'error' 
+                  ? 'bg-red-50 border-red-200' 
+                  : 'bg-green-50 border-green-200'
+              }`}>
+                <p className={`text-xs sm:text-sm ${
+                  message.type === 'error' ? 'text-red-700' : 'text-green-700'
+                }`}>
+                  {message.text}
+                </p>
               </div>
             )}
 

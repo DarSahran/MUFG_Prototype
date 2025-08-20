@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
 import { Check, X, Star, Zap, Crown, Users, TrendingUp, Shield, Calculator, Bot, BarChart3, Globe, DollarSign } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useSubscription } from '../hooks/useSubscription';
+import { STRIPE_PRODUCTS, getMonthlyAndYearlyProducts } from '../stripe-config';
 
 export const PricingPage: React.FC = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [selectedTier, setSelectedTier] = useState<string>('pro');
+  const { createCheckoutSession, loading: subscriptionLoading } = useSubscription();
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
+  const groupedProducts = getMonthlyAndYearlyProducts();
+  
   const pricingTiers = [
     {
       id: 'free',
@@ -42,112 +48,81 @@ export const PricingPage: React.FC = () => {
       cta: 'Start Free',
       popular: false
     },
-    {
-      id: 'pro',
-      name: 'SuperAI Pro',
-      tagline: 'Most popular for serious investors',
-      audience: 'Active investors & professionals',
-      icon: Zap,
-      color: 'green',
-      pricing: {
-        monthly: 29,
-        yearly: 299, // 14% discount
-        yearlyDiscount: 14,
-      },
-      features: {
-        included: [
-          'Unlimited portfolio holdings',
-          'Weekly AI insights & recommendations',
-          'Advanced forecasting & Monte Carlo simulations',
-          'Real-time market data & alerts',
-          'Tax optimization strategies',
-          'Risk analysis & rebalancing suggestions',
-          'Priority email & chat support',
-          'Advanced charts & analytics',
-          'Portfolio performance benchmarking',
-          'Goal tracking & milestone alerts',
-          'Export reports (PDF/Excel)',
-          'What-if scenario modeling'
-        ],
-        limitations: [
-          'Up to 3 AI consultations per week',
-          'Standard API rate limits',
-          'No white-label features'
-        ]
-      },
-      cta: 'Start Pro Trial',
-      popular: true
-    },
-    {
-      id: 'family',
-      name: 'SuperAI Family',
-      tagline: 'Perfect for families & couples',
-      audience: 'Families & financial planning together',
-      icon: Users,
-      color: 'purple',
-      pricing: {
-        monthly: 49,
-        yearly: 499, // 15% discount
-        yearlyDiscount: 15,
-      },
-      features: {
-        included: [
-          'Everything in Pro, plus:',
-          'Up to 4 family member accounts',
-          'Shared family financial goals',
-          'Joint portfolio management',
-          'Family financial education resources',
-          'Spouse contribution optimization',
-          'Estate planning guidance',
-          'Family meeting scheduler',
-          'Consolidated reporting across accounts',
-          'Child education savings planning',
-          'Family risk assessment tools',
-          'Inheritance planning features'
-        ],
-        limitations: [
-          'Maximum 4 family members',
-          'Shared AI consultation limits'
-        ]
-      },
-      cta: 'Start Family Plan',
-      popular: false
-    },
-    {
-      id: 'enterprise',
-      name: 'SuperAI Enterprise',
-      tagline: 'For wealth managers & institutions',
-      audience: 'Financial advisors & institutions',
-      icon: Crown,
-      color: 'orange',
-      pricing: {
-        monthly: 199,
-        yearly: 1999, // 16% discount
-        yearlyDiscount: 16,
-      },
-      features: {
-        included: [
-          'Everything in Family, plus:',
-          'Unlimited client accounts',
-          'White-label dashboard options',
-          'Advanced API access & integrations',
-          'Custom investment strategies',
-          'Dedicated account manager',
-          'Phone support & training',
-          'Advanced compliance reporting',
-          'Team collaboration tools',
-          'Custom alerts & notifications',
-          'Priority feature requests',
-          'SMSF advanced analytics',
-          'Institutional-grade security',
-          'Custom branding options'
-        ],
-        limitations: []
-      },
-      cta: 'Contact Sales',
-      popular: false
-    }
+    ...Object.entries(groupedProducts).map(([category, products]) => {
+      const monthlyProduct = products.monthly;
+      const yearlyProduct = products.yearly;
+      
+      if (!monthlyProduct && !yearlyProduct) return null;
+      
+      const baseProduct = monthlyProduct || yearlyProduct!;
+      const monthlyPrice = monthlyProduct?.price || 0;
+      const yearlyPrice = yearlyProduct?.price || 0;
+      const yearlyDiscount = monthlyPrice > 0 && yearlyPrice > 0 
+        ? Math.round(((monthlyPrice * 12 - yearlyPrice) / (monthlyPrice * 12)) * 100)
+        : 0;
+      
+      return {
+        id: category,
+        name: baseProduct.name,
+        tagline: baseProduct.description,
+        audience: category === 'pro' ? 'Active investors & professionals' :
+                 category === 'family' ? 'Families & financial planning together' :
+                 'Financial advisors & institutions',
+        icon: category === 'pro' ? Zap : category === 'family' ? Users : Crown,
+        color: category === 'pro' ? 'green' : category === 'family' ? 'purple' : 'orange',
+        pricing: {
+          monthly: monthlyPrice,
+          yearly: yearlyPrice,
+          yearlyDiscount,
+        },
+        features: {
+          included: baseProduct.features,
+          limitations: category === 'pro' ? [
+            'Up to 3 AI consultations per week',
+            'Standard API rate limits',
+            'No white-label features'
+          ] : category === 'family' ? [
+            'Maximum 4 family members',
+            'Shared AI consultation limits'
+          ] : []
+        },
+        cta: category === 'enterprise' ? 'Contact Sales' : 
+             category === 'family' ? 'Start Family Plan' : 'Start Pro Trial',
+        popular: category === 'pro',
+        monthlyProduct,
+        yearlyProduct,
+      };
+    }).filter(Boolean)
   ];
+
+  const handlePurchase = async (tier: any) => {
+    if (tier.id === 'free') {
+      // Handle free tier signup
+      return;
+    }
+    
+    if (tier.id === 'enterprise') {
+      // Handle enterprise contact
+      window.location.href = 'mailto:enterprise@superaiadvisor.com';
+      return;
+    }
+    
+    const product = billingCycle === 'monthly' ? tier.monthlyProduct : tier.yearlyProduct;
+    if (!product) {
+      alert('Product not available for selected billing cycle');
+      return;
+    }
+    
+    setCheckoutLoading(tier.id);
+    try {
+      await createCheckoutSession(product.priceId, 'subscription');
+    } catch (error: any) {
+      console.error('Checkout error:', error);
+      alert('Failed to start checkout: ' + error.message);
+    } finally {
+      setCheckoutLoading(null);
+    }
+  };
 
   const comparisonFeatures = [
     {
@@ -378,14 +353,15 @@ export const PricingPage: React.FC = () => {
 
                   {/* CTA Button */}
                   <button
-                    onClick={() => setSelectedTier(tier.id)}
+                    onClick={() => handlePurchase(tier)}
+                    disabled={checkoutLoading === tier.id}
                     className={`w-full py-3 px-6 rounded-xl font-semibold text-white transition-all duration-200 ${
                       isPopular 
                         ? 'bg-green-600 hover:bg-green-700 shadow-lg hover:shadow-xl' 
                         : `${getColorClasses(tier.color, 'button')} shadow-md hover:shadow-lg`
-                    }`}
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
-                    {tier.cta}
+                    {checkoutLoading === tier.id ? 'Loading...' : tier.cta}
                   </button>
 
                   {tier.id === 'free' && (
@@ -599,7 +575,11 @@ export const PricingPage: React.FC = () => {
               Join thousands of smart investors using AI to maximize their retirement savings
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="px-8 py-4 bg-white text-blue-600 rounded-xl hover:bg-slate-50 transition-colors font-bold text-lg">
+              <button 
+                onClick={() => handlePurchase(pricingTiers.find(t => t.popular))}
+                disabled={!!checkoutLoading}
+                className="px-8 py-4 bg-white text-blue-600 rounded-xl hover:bg-slate-50 transition-colors font-bold text-lg disabled:opacity-50"
+              >
                 Start Free Trial
               </button>
               <button className="px-8 py-4 border-2 border-white text-white rounded-xl hover:bg-white/10 transition-colors font-bold text-lg">
