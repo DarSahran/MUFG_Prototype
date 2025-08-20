@@ -1,9 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { TrendingUp, DollarSign, Target, AlertCircle, Star, RefreshCw, MessageCircle, BarChart3, PieChart, Calculator } from 'lucide-react';
+import { TrendingUp, DollarSign, Target, AlertCircle, Star, RefreshCw, MessageCircle, BarChart3, PieChart, Calculator, Activity, ThumbsUp, ThumbsDown, Bot } from 'lucide-react';
 import { AIAdvisorInterface } from './AIAdvisor/AIAdvisorInterface';
 import { RealTimeMarketDashboard } from './MarketData/RealTimeMarketDashboard';
 import { serperService, InvestmentRecommendation, MarketInsight } from '../services/serperService';
-import { marketDataService } from '../services/marketData';
+// import { marketDataService } from '../services/marketData';
+// Backend endpoint for stock quotes
+const BACKEND_API_URL = 'https://mufg-hackathon-backend-qc1e7g9td-darsahrans-projects.vercel.app/api/quote';
+
+// Helper to fetch stock data from backend
+async function fetchStockQuote(symbol: string) {
+  try {
+    const response = await fetch(`${BACKEND_API_URL}?symbol=${encodeURIComponent(symbol)}`);
+    if (!response.ok) throw new Error('Network response was not ok');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching stock quote:', error);
+    return null;
+  }
+}
 import { usePortfolio } from '../hooks/usePortfolio';
 import { useAIAdvisor } from '../hooks/useAIAdvisor';
 import { UserProfile } from '../App';
@@ -86,33 +100,36 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
         startCooldownTimer(120); // 2 minutes
       }
 
-      const marketData = await Promise.all([
-        marketDataService.getStockQuote('VAS.AX'),
-        marketDataService.getStockQuote('VGS.AX'),
-        marketDataService.getStockQuote('VAF.AX'),
-        marketDataService.getStockQuote('VGE.AX'),
-      ]);
-      const validMarketData = marketData.filter(Boolean).length > 0 
-        ? marketData.filter(Boolean) 
-        : [
-            marketDataService.getMockStockData('VAS.AX'),
-            marketDataService.getMockStockData('VGS.AX'),
-            marketDataService.getMockStockData('VAF.AX'),
-            marketDataService.getMockStockData('VGE.AX'),
-          ];
+      // Fetch market data for required symbols from backend
+      const symbols = ['VAS.AX', 'VGS.AX', 'VAF.AX', 'VGE.AX'];
+      const marketData = await Promise.all(symbols.map(fetchStockQuote));
+      // If all fail, use fallback/mock data from backend response
+      const validMarketData = marketData.filter(d => d && d.source);
+      // If all are null, create mock fallback data
+      const fallbackData = symbols.map(symbol => ({
+        source: 'fallback',
+        symbol,
+        currency: 'USD',
+        regularMarketPrice: 100.0,
+        open: 100.1,
+        previousClose: 99.5,
+        dayHigh: 101.0,
+        dayLow: 99.0,
+        note: 'This is mock data.'
+      }));
+      const usedMarketData = validMarketData.length > 0 ? validMarketData : fallbackData;
       const [aiRecommendations, aiInsights] = await Promise.all([
-        serperService.getInvestmentRecommendations(userProfile, validMarketData),
-        serperService.getMarketInsights(validMarketData, userProfile)
+        serperService.getInvestmentRecommendations(userProfile, usedMarketData),
+        serperService.getMarketInsights(usedMarketData, userProfile)
       ]);
       setRecommendations(aiRecommendations);
       setInsights(aiInsights);
-      
     } catch (error) {
       console.error('Error loading AI data:', error);
-      
-      // If error due to rate limiting, show helpful message
-      if (error.message?.includes('429') || error.message?.includes('Too Many Requests')) {
-        alert('Rate limit exceeded. Please wait before making more requests.');
+      if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as any).message === 'string') {
+        if ((error as any).message.includes('429') || (error as any).message.includes('Too Many Requests')) {
+          alert('Rate limit exceeded. Please wait before making more requests.');
+        }
       }
     } finally {
       setLoading(false);
