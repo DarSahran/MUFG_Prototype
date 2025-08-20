@@ -275,10 +275,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                   <span className="sm:hidden">Start Free Analysis</span>
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
                 </button>
-                <button className="group flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 border-2 border-slate-300 text-slate-700 rounded-lg hover:border-slate-400 hover:bg-slate-50 hover:scale-105 transition-all duration-300 font-semibold text-base sm:text-lg">
-                  Watch Demo
-                  <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
-                </button>
+               
               </div>
 
               <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs sm:text-sm text-slate-600 animate-fade-in-up animation-delay-900">
