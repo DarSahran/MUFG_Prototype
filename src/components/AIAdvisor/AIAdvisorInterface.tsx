@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, AlertCircle, TrendingUp, Target, Calculator, Shield, Clock, Star, Zap, RefreshCw } from 'lucide-react';
+import { Send, Bot, User, AlertCircle, TrendingUp, Target, Calculator, Shield, Clock, Star, Zap, RefreshCw, Crown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAIAdvisor } from '../../hooks/useAIAdvisor';
 import { usePortfolio } from '../../hooks/usePortfolio';
@@ -26,7 +26,7 @@ interface AIAdvisorInterfaceProps {
 }
 
 export const AIAdvisorInterface: React.FC<AIAdvisorInterfaceProps> = ({ userProfile }) => {
-  const { askAI, loading, error, usageInfo, fetchUsageInfo } = useAIAdvisor();
+  const { askAI, loading, error, usageInfo, fetchUsageInfo, getRemainingTime, canMakeRequest } = useAIAdvisor();
   const { getTotalPortfolioValue } = usePortfolio();
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -39,6 +39,7 @@ export const AIAdvisorInterface: React.FC<AIAdvisorInterfaceProps> = ({ userProf
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   useEffect(() => {
     scrollToBottom();
@@ -54,6 +55,12 @@ export const AIAdvisorInterface: React.FC<AIAdvisorInterfaceProps> = ({ userProf
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
+
+    // Check if user can make request
+    if (!canMakeRequest()) {
+      setShowUpgradeModal(true);
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -75,6 +82,9 @@ export const AIAdvisorInterface: React.FC<AIAdvisorInterfaceProps> = ({ userProf
           riskProfile: userProfile.riskTolerance,
           age: userProfile.age,
           retirementAge: userProfile.retirementAge,
+          
+          // Refresh usage info after successful query
+          await fetchUsageInfo();
         }
       });
 
@@ -139,7 +149,7 @@ export const AIAdvisorInterface: React.FC<AIAdvisorInterfaceProps> = ({ userProf
             </div>
             <div>
               <h2 className="text-lg sm:text-xl font-bold text-slate-900">AI Financial Advisor</h2>
-              <p className="text-sm text-slate-600">Powered by real-time market data</p>
+              <p className="text-sm text-slate-600">Powered by Serper AI & real-time market data</p>
             </div>
           </div>
           
@@ -147,41 +157,56 @@ export const AIAdvisorInterface: React.FC<AIAdvisorInterfaceProps> = ({ userProf
             <div className="text-right">
               <div className="flex items-center space-x-2">
                 <div className={`w-2 h-2 rounded-full ${
-                  usageInfo.remaining > 5 ? 'bg-green-500' : 
+                  usageInfo.remaining > 3 ? 'bg-green-500' : 
                   usageInfo.remaining > 0 ? 'bg-yellow-500' : 'bg-red-500'
                 }`} />
                 <span className="text-sm font-medium text-slate-700">
                   {usageInfo.remaining}/{usageInfo.limit} queries left
                 </span>
               </div>
-              <div className="text-xs text-slate-500">{usageInfo.planName} Plan</div>
+              <div className="text-xs text-slate-500">
+                {usageInfo.planName} Plan • {getRemainingTime()}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Usage Warning */}
-        {usageInfo && usageInfo.remaining <= 3 && usageInfo.remaining > 0 && (
-          <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+        {/* Enhanced Usage Warnings */}
+        {usageInfo && usageInfo.remaining <= 2 && usageInfo.remaining > 0 && (
+          <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
             <div className="flex items-center space-x-2">
-              <AlertCircle className="w-4 h-4 text-yellow-600" />
-              <span className="text-sm text-yellow-800">
-                Only {usageInfo.remaining} queries remaining this month. Consider upgrading your plan.
+              <AlertCircle className="w-4 h-4 text-orange-600" />
+              <span className="text-sm text-orange-800">
+                Only {usageInfo.remaining} queries remaining this {usageInfo.resetPeriod}. 
+                {usageInfo.resetPeriod === 'weekly' ? ' Resets weekly.' : ' Consider upgrading your plan.'}
               </span>
+              {usageInfo.planName === 'Free' && (
+                <button 
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="ml-auto text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Upgrade
+                </button>
+              )}
             </div>
           </div>
         )}
 
         {usageInfo && usageInfo.remaining === 0 && (
           <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center space-x-2">
                 <AlertCircle className="w-4 h-4 text-red-600" />
                 <span className="text-sm text-red-800">
-                  You've reached your monthly query limit.
+                  You've reached your {usageInfo.resetPeriod} query limit. {getRemainingTime()}.
                 </span>
               </div>
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                Upgrade Plan
+              <button 
+                onClick={() => setShowUpgradeModal(true)}
+                className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              >
+                <Crown className="w-3 h-3" />
+                <span>Upgrade Plan</span>
               </button>
             </div>
           </div>
@@ -379,16 +404,16 @@ export const AIAdvisorInterface: React.FC<AIAdvisorInterfaceProps> = ({ userProf
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage(inputText)}
             placeholder={
-              usageInfo?.remaining === 0 
-                ? "Upgrade your plan to ask more questions..."
+              !canMakeRequest() 
+                ? `Upgrade your plan or wait for ${usageInfo?.resetPeriod} reset to ask more questions...`
                 : "Ask me about investments, market trends, or financial planning..."
             }
-            disabled={loading || usageInfo?.remaining === 0}
+            disabled={loading || !canMakeRequest()}
             className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 disabled:cursor-not-allowed text-sm sm:text-base"
           />
           <button
             onClick={() => handleSendMessage(inputText)}
-            disabled={!inputText.trim() || loading || usageInfo?.remaining === 0}
+            disabled={!inputText.trim() || loading || !canMakeRequest()}
             className="px-4 sm:px-6 py-3 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg hover:from-blue-700 hover:to-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
@@ -405,6 +430,15 @@ export const AIAdvisorInterface: React.FC<AIAdvisorInterfaceProps> = ({ userProf
           Consult a licensed advisor for specific guidance.
         </p>
       </div>
+      
+      {/* Plan Upgrade Modal */}
+      {showUpgradeModal && (
+        <PlanUpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          reason="api_limit"
+        />
+      )}
     </div>
   );
 };

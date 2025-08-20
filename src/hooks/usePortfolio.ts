@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import { AssetHolding } from '../types/portfolio';
+import { customBackendAPI } from '../services/customBackendAPI';
 
 interface UserGoal {
   id: string;
@@ -42,6 +43,24 @@ export const usePortfolio = () => {
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefreshPortfolio = async () => {
+    if (refreshing) return; // Prevent multiple simultaneous refreshes
+    
+    setRefreshing(true);
+    try {
+      // Update asset prices from custom backend
+      await updateAssetPrices();
+      
+      // Refetch portfolio data
+      await fetchPortfolioData();
+    } catch (error) {
+      console.error('Error refreshing portfolio:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -262,6 +281,36 @@ export const usePortfolio = () => {
     }
   };
 
+  const updateAssetPrices = async () => {
+    if (!user || holdings.length === 0) return;
+
+    try {
+      // Get symbols that have them
+      const symbolHoldings = holdings.filter(h => h.symbol);
+      const symbols = symbolHoldings.map(h => h.symbol!);
+      
+      if (symbols.length === 0) return;
+      
+      // Fetch latest prices from custom backend
+      const quotes = await customBackendAPI.getMultipleQuotes(symbols);
+      
+      // Update holdings with new prices
+      const updatePromises = symbolHoldings.map(async (holding) => {
+        const quote = quotes[holding.symbol!];
+        if (quote && quote.regularMarketPrice > 0) {
+          return updateHolding(holding.id, { 
+            currentPrice: quote.regularMarketPrice 
+          });
+        }
+      });
+      
+      await Promise.allSettled(updatePromises);
+      
+    } catch (error) {
+      console.error('Error updating asset prices:', error);
+    }
+  };
+
   const getTotalPortfolioValue = () => {
     try {
       return holdings.reduce((total, holding) => {
@@ -294,6 +343,7 @@ export const usePortfolio = () => {
     preferences,
     loading,
     error,
+    refreshing,
     addHolding,
     updateHolding,
     deleteHolding,
@@ -301,6 +351,8 @@ export const usePortfolio = () => {
     updatePreferences,
     getTotalPortfolioValue,
     getAssetAllocation,
+    updateAssetPrices,
+    handleRefreshPortfolio,
     refetch: fetchPortfolioData,
   };
 };

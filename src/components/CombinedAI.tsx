@@ -3,23 +3,10 @@ import { TrendingUp, DollarSign, Target, AlertCircle, Star, RefreshCw, MessageCi
 import { AIAdvisorInterface } from './AIAdvisor/AIAdvisorInterface';
 import { RealTimeMarketDashboard } from './MarketData/RealTimeMarketDashboard';
 import { serperService, InvestmentRecommendation, MarketInsight } from '../services/serperService';
-// import { marketDataService } from '../services/marketData';
-// Backend endpoint for stock quotes
-const BACKEND_API_URL = 'https://mufg-hackathon-backend-q8zxhtuu6-darsahrans-projects.vercel.app/api/quote';
-
-// Helper to fetch stock data from backend
-async function fetchStockQuote(symbol: string) {
-  try {
-    const response = await fetch(`${BACKEND_API_URL}?symbol=${encodeURIComponent(symbol)}`);
-    if (!response.ok) throw new Error('Network response was not ok');
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching stock quote:', error);
-    return null;
-  }
-}
+import { customBackendAPI } from '../services/customBackendAPI';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { useAIAdvisor } from '../hooks/useAIAdvisor';
+import { usePlanAccess } from '../hooks/usePlanAccess';
 import { UserProfile } from '../App';
 
 interface CombinedAIProps {
@@ -27,7 +14,8 @@ interface CombinedAIProps {
 }
 
 export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
-  const { usageInfo } = useAIAdvisor();
+  const { usageInfo, getRemainingTime } = useAIAdvisor();
+  const { userPlan } = usePlanAccess();
   const { getTotalPortfolioValue } = usePortfolio();
   
   // Recommendations/Insights State
@@ -87,7 +75,13 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
   const loadAIData = async (forceRefresh = false) => {
     // Check cooldown unless forced
     if (!forceRefresh && refreshCooldown > 0) {
-      alert(`Please wait ${Math.ceil(refreshCooldown / 60)} more minutes before refreshing.`);
+      alert(`Please wait ${Math.ceil(refreshCooldown / 60)} more minutes before refreshing AI insights.`);
+      return;
+    }
+
+    // Check plan limits
+    if (usageInfo && usageInfo.remaining <= 0) {
+      alert(`You've reached your ${usageInfo.resetPeriod} limit. ${getRemainingTime()}.`);
       return;
     }
 
@@ -97,31 +91,21 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
       // Set cooldown immediately when refresh starts
       if (!forceRefresh) {
         localStorage.setItem('lastAIRefresh', Date.now().toString());
-        startCooldownTimer(120); // 2 minutes
+        // Shorter cooldown for premium users
+        const cooldownTime = userPlan?.name === 'Free' ? 300 : 120; // 5min for free, 2min for premium
+        startCooldownTimer(cooldownTime);
       }
 
-      // Fetch market data for required symbols from backend
+      // Fetch market data from custom backend
       const symbols = ['VAS.AX', 'VGS.AX', 'VAF.AX', 'VGE.AX'];
-      const marketData = await Promise.all(symbols.map(fetchStockQuote));
-      // If all fail, use fallback/mock data from backend response
-      const validMarketData = marketData.filter(d => d && d.source);
-      // If all are null, create mock fallback data
-      const fallbackData = symbols.map(symbol => ({
-        source: 'fallback',
-        symbol,
-        currency: 'USD',
-        regularMarketPrice: 100.0,
-        open: 100.1,
-        previousClose: 99.5,
-        dayHigh: 101.0,
-        dayLow: 99.0,
-        note: 'This is mock data.'
-      }));
-      const usedMarketData = validMarketData.length > 0 ? validMarketData : fallbackData;
+      const marketQuotes = await customBackendAPI.getMultipleQuotes(symbols);
+      const marketData = Object.values(marketQuotes);
+      
       const [aiRecommendations, aiInsights] = await Promise.all([
-        serperService.getInvestmentRecommendations(userProfile, usedMarketData),
-        serperService.getMarketInsights(usedMarketData, userProfile)
+        serperService.getInvestmentRecommendations(userProfile, marketData),
+        serperService.getMarketInsights(marketData, userProfile)
       ]);
+      
       setRecommendations(aiRecommendations);
       setInsights(aiInsights);
     } catch (error) {
@@ -298,26 +282,30 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
             <div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">AI Investment Advisor</h1>
               <p className="text-sm sm:text-base text-slate-600">
-                Personalized recommendations for your ${getTotalPortfolioValue().toLocaleString()} portfolio
+                Personalized recommendations • ${getTotalPortfolioValue().toLocaleString()} portfolio
               </p>
-              {usageInfo && usageInfo.remaining < 5 && (
-                <div className="mt-2 flex items-center space-x-2 text-xs text-orange-600">
+              {usageInfo && usageInfo.remaining <= 2 && (
+                <div className="mt-2 flex items-center space-x-2 text-xs text-red-600">
                   <AlertCircle className="w-4 h-4" />
-                  <span>AI queries remaining: {usageInfo.remaining}/{usageInfo.limit}</span>
+                  <span>
+                    {usageInfo.remaining} queries left this {usageInfo.resetPeriod} • {getRemainingTime()}
+                  </span>
                 </div>
               )}
             </div>
             <button
               onClick={() => loadAIData()}
-              disabled={loading || refreshCooldown > 0}
+              disabled={loading || refreshCooldown > 0 || (usageInfo?.remaining === 0)}
               className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm sm:text-base"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">
-                {refreshCooldown > 0 ? `Wait ${Math.ceil(refreshCooldown / 60)}m` : 'Refresh'}
+                {refreshCooldown > 0 ? `Wait ${Math.ceil(refreshCooldown / 60)}m` : 
+                 usageInfo?.remaining === 0 ? 'Limit Reached' : 'Refresh'}
               </span>
               <span className="sm:hidden">
-                {refreshCooldown > 0 ? `${Math.ceil(refreshCooldown / 60)}m` : 'Refresh'}
+                {refreshCooldown > 0 ? `${Math.ceil(refreshCooldown / 60)}m` : 
+                 usageInfo?.remaining === 0 ? 'Limit' : 'Refresh'}
               </span>
             </button>
           </div>
@@ -353,14 +341,19 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
           </div>
           
           {/* Usage Status */}
-          {usageInfo && usageInfo.remaining < 10 && (
+          {usageInfo && (
             <div className="px-6 py-3 bg-blue-50 border-t border-blue-200">
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2 text-blue-700">
                   <AlertCircle className="w-4 h-4" />
-                  <span>AI Queries: {usageInfo.remaining}/{usageInfo.limit} remaining this month</span>
+                  <span>
+                    AI Queries: {usageInfo.remaining}/{usageInfo.limit} remaining this {usageInfo.resetPeriod}
+                  </span>
                 </div>
-                <span className="text-blue-600">{usageInfo.planName} Plan</span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-blue-600">{usageInfo.planName} Plan</span>
+                  <span className="text-xs text-blue-500">• {getRemainingTime()}</span>
+                </div>
               </div>
             </div>
           )}
