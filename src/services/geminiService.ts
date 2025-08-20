@@ -28,7 +28,7 @@ export interface MarketInsight {
 }
 
 class GeminiService {
-  private model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+  private model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 
   async getInvestmentRecommendations(userProfile: any, marketData: any[]): Promise<InvestmentRecommendation[]> {
     // Enhanced prompt with more context
