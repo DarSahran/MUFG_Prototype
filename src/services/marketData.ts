@@ -71,6 +71,7 @@ class MarketDataService {
         
         // Try Yahoo Finance first
         try {
+          console.log(`Fetching quote for ${symbol} from Yahoo Finance...`);
           const response = await axios.get(`${YAHOO_FINANCE_URL}/quote`, {
             params: { symbols: symbol },
             timeout: 5000,
@@ -80,14 +81,15 @@ class MarketDataService {
           if (quote) {
             const stockData: StockData = {
               symbol: quote.symbol,
-              price: quote.regularMarketPrice,
-              change: quote.regularMarketChange,
-              changePercent: quote.regularMarketChangePercent,
-              volume: quote.regularMarketVolume,
+              price: parseFloat(quote.regularMarketPrice) || 0,
+              change: parseFloat(quote.regularMarketChange) || 0,
+              changePercent: parseFloat(quote.regularMarketChangePercent) || 0,
+              volume: parseInt(quote.regularMarketVolume) || 0,
               marketCap: quote.marketCap,
               pe: quote.trailingPE,
               dividend: quote.dividendYield,
             };
+            console.log(`Successfully fetched ${symbol}:`, stockData);
             this.setCachedData(cacheKey, stockData);
             return stockData;
           }
@@ -97,6 +99,7 @@ class MarketDataService {
 
         await apiRateLimiter.acquireToken();
         
+        console.log(`Fetching quote for ${symbol} from Alpha Vantage...`);
         // Fallback to Alpha Vantage
         const response = await axios.get(ALPHA_VANTAGE_URL, {
           params: {
@@ -118,6 +121,7 @@ class MarketDataService {
           volume: parseInt(quote['06. volume']),
         };
 
+        console.log(`Successfully fetched ${symbol} from Alpha Vantage:`, stockData);
         this.setCachedData(cacheKey, stockData);
         return stockData;
       },

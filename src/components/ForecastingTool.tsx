@@ -39,8 +39,20 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
     }
   }, [selectedScenario, customInputs]);
 
+  useEffect(() => {
+    // Update initial amount when portfolio value changes
+    const currentPortfolioValue = getTotalPortfolioValue();
+    if (currentPortfolioValue > 0) {
+      setCustomInputs(prev => ({
+        ...prev,
+        initialAmount: currentPortfolioValue
+      }));
+    }
+  }, [getTotalPortfolioValue()]);
   const calculateForecast = () => {
     try {
+      console.log('Calculating forecast with inputs:', customInputs);
+      
       // Convert holdings to unified assets
       const unifiedAssets = holdings.map(holding => ({
         id: holding.id,
@@ -77,48 +89,81 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
     } catch (error) {
       console.error('Error calculating forecast:', error);
       // Fallback to simple calculation
+      console.log('Using fallback calculation method');
       setForecastData(calculateSimpleForecast());
     }
   };
 
   const calculateSimpleForecast = () => {
+    console.log('Calculating simple forecast with scenario:', selectedScenario);
     const scenario = scenarios[selectedScenario];
     const annualReturn = scenario.return / 100;
     const monthlyReturn = annualReturn / 12;
     const data = [];
     let value = customInputs.initialAmount;
+    let monthlyContribution = customInputs.monthlyContribution;
     
     for (let year = 0; year <= customInputs.yearsToForecast; year++) {
       if (year > 0) {
+        // Apply contribution increases
+        monthlyContribution *= (1 + customInputs.contributionIncrease / 100);
+        
         for (let month = 0; month < 12; month++) {
-          value = value * (1 + monthlyReturn) + customInputs.monthlyContribution;
+          value = value * (1 + monthlyReturn) + monthlyContribution;
         }
+        
+        // Apply fees
+        value *= (1 - customInputs.feeRate / 100);
       }
+      
       data.push({
         year: new Date().getFullYear() + year,
         totalValue: Math.round(value),
-        contributions: Math.round(customInputs.initialAmount + (customInputs.monthlyContribution * 12 * year)),
-        growth: Math.round(value - (customInputs.initialAmount + (customInputs.monthlyContribution * 12 * year)))
+        contributions: Math.round(customInputs.initialAmount + (monthlyContribution * 12 * year)),
+        growth: Math.round(value - (customInputs.initialAmount + (monthlyContribution * 12 * year))),
+        fees: Math.round(value * customInputs.feeRate / 100),
       });
     }
+    
+    console.log('Generated forecast data:', data.slice(0, 3)); // Log first 3 years
     return data;
   };
 
   const runMonteCarloSimulation = () => {
-    // This would use the portfolio engine's Monte Carlo simulation
-    // For now, generate sample data
+    console.log('Running Monte Carlo simulation...');
     const data = [];
+    const baseValue = customInputs.initialAmount;
+    const annualReturn = scenarios[selectedScenario].return / 100;
+    const volatility = 0.15; // 15% volatility
+    
     for (let year = 1; year <= Math.min(customInputs.yearsToForecast, 10); year++) {
+      // Generate multiple scenarios for this year
+      const scenarios = [];
+      for (let i = 0; i < 1000; i++) {
+        let value = baseValue;
+        for (let y = 1; y <= year; y++) {
+          // Apply random return with volatility
+          const randomReturn = annualReturn + (Math.random() - 0.5) * volatility * 2;
+          value *= (1 + randomReturn);
+          value += customInputs.monthlyContribution * 12;
+        }
+        scenarios.push(value);
+      }
+      
+      scenarios.sort((a, b) => a - b);
+      
       data.push({
         year: new Date().getFullYear() + year,
-        percentile10: Math.round(customInputs.initialAmount * Math.pow(1.03, year)),
-        percentile25: Math.round(customInputs.initialAmount * Math.pow(1.05, year)),
-        percentile50: Math.round(customInputs.initialAmount * Math.pow(1.075, year)),
-        percentile75: Math.round(customInputs.initialAmount * Math.pow(1.10, year)),
-        percentile90: Math.round(customInputs.initialAmount * Math.pow(1.12, year)),
-        probabilityOfSuccess: Math.max(0.3, Math.min(0.95, 0.8 - (year * 0.02)))
+        percentile10: Math.round(scenarios[Math.floor(scenarios.length * 0.1)]),
+        percentile25: Math.round(scenarios[Math.floor(scenarios.length * 0.25)]),
+        percentile50: Math.round(scenarios[Math.floor(scenarios.length * 0.5)]),
+        percentile75: Math.round(scenarios[Math.floor(scenarios.length * 0.75)]),
+        percentile90: Math.round(scenarios[Math.floor(scenarios.length * 0.9)]),
+        probabilityOfSuccess: scenarios.filter(v => v >= retirementGoal).length / scenarios.length
       });
     }
+    
+    console.log('Monte Carlo simulation completed:', data.slice(0, 3));
     setMonteCarloData(data);
   };
 
@@ -268,6 +313,7 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
                 stroke="#3b82f6"
                 strokeWidth={3}
                 dot={false}
+                name="Total Portfolio Value"
               />
               <Bar
                 dataKey="probabilityOfSuccess"
@@ -277,6 +323,36 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
               />
             </ComposedChart>
           </ResponsiveContainer>
+        </div>
+        
+        {/* Forecast Insights */}
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 bg-blue-50 rounded-lg">
+            <h4 className="font-semibold text-blue-900 mb-2">Scenario Analysis</h4>
+            <p className="text-sm text-blue-700">
+              {selectedScenario === 'conservative' ? 'Lower risk approach with steady, predictable growth' :
+               selectedScenario === 'moderate' ? 'Balanced strategy with moderate risk and solid returns' :
+               'Higher risk strategy targeting maximum long-term growth'}
+            </p>
+          </div>
+          
+          <div className="p-4 bg-green-50 rounded-lg">
+            <h4 className="font-semibold text-green-900 mb-2">Key Metrics</h4>
+            <div className="space-y-1 text-sm text-green-700">
+              <div>Expected Return: {scenarios[selectedScenario].return}%</div>
+              <div>Final Value: {formatCurrency(finalValue)}</div>
+              <div>Total Growth: {formatCurrency(totalGrowth)}</div>
+            </div>
+          </div>
+          
+          <div className="p-4 bg-purple-50 rounded-lg">
+            <h4 className="font-semibold text-purple-900 mb-2">Retirement Income</h4>
+            <div className="space-y-1 text-sm text-purple-700">
+              <div>Monthly Income: {formatCurrency(monthlyRetirementIncome)}</div>
+              <div>Goal Achievement: {goalAchievementProbability.toFixed(0)}%</div>
+              <div>Years to Goal: {customInputs.yearsToForecast}</div>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -303,15 +379,26 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-slate-900">Portfolio Forecast</h2>
             <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 text-sm text-slate-600">
+                <span>Scenario:</span>
+                <span className="font-medium capitalize text-blue-600">{selectedScenario}</span>
+              </div>
               <select
                 value={selectedScenario}
                 onChange={(e) => setSelectedScenario(e.target.value as any)}
                 className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
-                <option value="conservative">Conservative</option>
-                <option value="moderate">Moderate</option>
-                <option value="optimistic">Optimistic</option>
+                <option value="conservative">Conservative (5.5% return)</option>
+                <option value="moderate">Moderate (7.5% return)</option>
+                <option value="optimistic">Optimistic (9.5% return)</option>
               </select>
+              <button
+                onClick={calculateForecast}
+                className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Recalculate</span>
+              </button>
             </div>
           </div>
           

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, MapPin, TrendingUp, Calculator, Plus, Edit3, Trash2, Search, Building } from 'lucide-react';
+import { Home, MapPin, TrendingUp, Calculator, Plus, Edit3, Trash2, Search, Building, RefreshCw } from 'lucide-react';
 import { AssetHolding } from '../../../types/portfolio';
 import { UserProfile } from '../../../App';
 import { PropertyAssetModal } from '../../PropertyAssetModal';
@@ -13,7 +13,8 @@ interface PropertyTabProps {
 export const PropertyTab: React.FC<PropertyTabProps> = ({ holdings, userProfile }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<AssetHolding | null>(null);
-  const { deleteHolding } = usePortfolio();
+  const [refreshing, setRefreshing] = useState(false);
+  const { deleteHolding, updateHolding } = usePortfolio();
 
   const propertyHoldings = holdings.filter(h => h.type === 'property');
   const totalPropertyValue = propertyHoldings.reduce((sum, holding) => 
@@ -51,6 +52,35 @@ export const PropertyTab: React.FC<PropertyTabProps> = ({ holdings, userProfile 
       type: 'info'
     }
   ];
+
+  const handleRefreshProperty = async () => {
+    setRefreshing(true);
+    try {
+      // Simulate property valuation updates
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      for (const holding of propertyHoldings) {
+        try {
+          // Simulate property market growth (0.1% to 0.5% monthly)
+          const monthlyGrowthRate = (Math.random() * 0.004) + 0.001; // 0.1% to 0.5%
+          const growth = holding.currentPrice * monthlyGrowthRate;
+          
+          await updateHolding(holding.id, { 
+            currentPrice: holding.currentPrice + growth 
+          });
+        } catch (error) {
+          console.error(`Error updating property ${holding.id}:`, error);
+        }
+      }
+      
+      console.log('Property valuations refreshed successfully');
+    } catch (error) {
+      console.error('Error refreshing property data:', error);
+      alert('Failed to refresh property valuations. Please try again.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleDeleteProperty = async (holdingId: string) => {
     if (confirm('Are you sure you want to remove this property from your portfolio?')) {
@@ -109,8 +139,16 @@ export const PropertyTab: React.FC<PropertyTabProps> = ({ holdings, userProfile 
         <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-purple-600 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-white" />
+              <RefreshCw className={`w-6 h-6 text-white ${refreshing ? 'animate-spin' : ''}`} />
             </div>
+            <button
+              onClick={handleRefreshProperty}
+              disabled={refreshing}
+              className="flex items-center gap-1 px-3 py-1 text-sm font-medium text-purple-700 hover:text-purple-800 disabled:opacity-50 bg-white/50 rounded-lg hover:bg-white/80 transition-colors"
+            >
+              <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Updating...' : 'Refresh'}
+            </button>
           </div>
           <h3 className="text-2xl font-bold text-slate-900 mb-1">
             {propertyMetrics.averageGrowth.toFixed(1)}%

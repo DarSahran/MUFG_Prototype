@@ -65,8 +65,12 @@ export const CryptoTab: React.FC<CryptoTabProps> = ({ holdings, userProfile }) =
     setRefreshing(true);
     try {
       await refreshPrices();
+      
+      // Show success feedback
+      console.log('Crypto prices refreshed successfully');
     } catch (error) {
       console.error('Error refreshing crypto prices:', error);
+      alert('Failed to refresh crypto prices. Please try again.');
     } finally {
       setRefreshing(false);
     }
@@ -126,9 +130,10 @@ export const CryptoTab: React.FC<CryptoTabProps> = ({ holdings, userProfile }) =
             <button
               onClick={handleRefreshCrypto}
               disabled={refreshing}
-              className="text-sm font-medium text-green-700 hover:text-green-800 disabled:opacity-50"
+              className="flex items-center gap-1 px-3 py-1 text-sm font-medium text-green-700 hover:text-green-800 disabled:opacity-50 bg-white/50 rounded-lg hover:bg-white/80 transition-colors"
             >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Updating...' : 'Refresh'}
             </button>
           </div>
           <h3 className={`text-2xl font-bold mb-1 ${
