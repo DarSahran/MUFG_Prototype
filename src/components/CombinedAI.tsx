@@ -5,7 +5,7 @@ import { RealTimeMarketDashboard } from './MarketData/RealTimeMarketDashboard';
 import { serperService, InvestmentRecommendation, MarketInsight } from '../services/serperService';
 // import { marketDataService } from '../services/marketData';
 // Backend endpoint for stock quotes
-const BACKEND_API_URL = 'https://mufg-hackathon-backend-95ys0i0m8-darsahrans-projects.vercel.app/api/quote';
+const BACKEND_API_URL = 'https://mufg-hackathon-backend-7qkurge4t-darsahrans-projects.vercel.app/api/quote';
 
 // Helper to fetch stock data from backend
 async function fetchStockQuote(symbol: string) {
