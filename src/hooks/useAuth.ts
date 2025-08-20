@@ -46,8 +46,24 @@ export const useAuth = () => {
     return { data, error }
   }
 
+  // Sign out and clear browser cache (localStorage, sessionStorage)
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
+    // Clear localStorage and sessionStorage for security after sign out
+    try {
+      localStorage.clear()
+      sessionStorage.clear()
+      // Optionally, clear indexedDB if your app uses it for caching
+      if (window.indexedDB) {
+        window.indexedDB.databases && window.indexedDB.databases().then(dbs => {
+          dbs.forEach(db => {
+            if (db.name) window.indexedDB.deleteDatabase(db.name)
+          })
+        })
+      }
+    } catch (e) {
+      // Ignore errors in cache clearing
+    }
     return { error }
   }
 

@@ -52,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, use
   return (
     <>
       <header className="fixed top-0 left-0 right-0 w-full bg-white/95 backdrop-blur-sm border-b border-slate-200 z-50 shadow-sm">
-        <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
+  <div className="w-full max-w mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
           <div className="grid grid-cols-5 items-center h-16 w-full gap-2">
             {/* 1. Website Name/Logo */}
             <div className="flex items-center min-w-0 justify-start">
@@ -146,8 +146,8 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, use
               
                   {/* Subscription Badge */}
                   {subscriptionPlan && (
-                    <div className="hidden sm:flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                      <Star className="w-3 h-3 mr-1" />
+                    <div className="hidden sm:flex items-center ml-4 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                      <Star className="w-3 h-3 mr-1 " />
                       {subscriptionPlan.name.replace('SuperAI ', '')}
                     </div>
                   )}
