@@ -21,14 +21,20 @@ class CustomBackendAPI {
     const cached = this.getCachedData(cacheKey);
     if (cached) return cached;
 
+    // Create AbortController for timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     try {
       const response = await fetch(`${this.baseUrl}/api/quote?symbol=${encodeURIComponent(symbol)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        timeout: 10000,
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -41,6 +47,7 @@ class CustomBackendAPI {
       
       return data;
     } catch (error) {
+      clearTimeout(timeoutId);
       console.error(`Error fetching quote for ${symbol}:`, error);
       
       // Return fallback data structure
