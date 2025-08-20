@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { apiRateLimiter } from '../utils/apiRateLimiter';
 
 const ALPHA_VANTAGE_API_KEY = import.meta.env.VITE_ALPHA_VANTAGE_API_KEY || 'demo';
 const ALPHA_VANTAGE_URL = 'https://www.alphavantage.co/query';
@@ -66,6 +67,8 @@ class MarketDataService {
 
     return this.fetchWithFallback(
       async () => {
+        await apiRateLimiter.acquireToken();
+        
         // Try Yahoo Finance first
         try {
           const response = await axios.get(`${YAHOO_FINANCE_URL}/quote`, {
@@ -92,6 +95,8 @@ class MarketDataService {
           console.warn('Yahoo Finance failed, trying Alpha Vantage:', yahooError);
         }
 
+        await apiRateLimiter.acquireToken();
+        
         // Fallback to Alpha Vantage
         const response = await axios.get(ALPHA_VANTAGE_URL, {
           params: {
@@ -127,6 +132,8 @@ class MarketDataService {
 
     return this.fetchWithFallback(
       async () => {
+        await apiRateLimiter.acquireToken();
+        
         const functionMap = {
           daily: 'TIME_SERIES_DAILY',
           weekly: 'TIME_SERIES_WEEKLY',
@@ -172,6 +179,8 @@ class MarketDataService {
 
     return this.fetchWithFallback(
       async () => {
+        await apiRateLimiter.acquireToken();
+        
         const coinId = this.symbolToCoinGeckoId(symbol);
         if (!coinId) throw new Error('Unsupported crypto symbol');
 
@@ -225,6 +234,8 @@ class MarketDataService {
 
     return this.fetchWithFallback(
       async () => {
+        await apiRateLimiter.acquireToken();
+        
         const response = await axios.get(ALPHA_VANTAGE_URL, {
           params: {
             function: 'NEWS_SENTIMENT',

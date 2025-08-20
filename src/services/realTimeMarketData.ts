@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { debounce } from 'lodash';
+import { apiRateLimiter } from '../utils/apiRateLimiter';
 
 export interface RealTimePrice {
   symbol: string;
@@ -119,6 +120,8 @@ class RealTimeMarketDataService {
     // Try Yahoo Finance first
     if (this.config.yahooFinanceEnabled) {
       try {
+        await apiRateLimiter.acquireToken();
+        
         const response = await axios.get('https://query1.finance.yahoo.com/v1/finance/quote', {
           params: { symbols: symbol },
           timeout: 5000,
@@ -144,6 +147,8 @@ class RealTimeMarketDataService {
     // Fallback to Alpha Vantage
     if (this.config.alphaVantageEnabled) {
       try {
+        await apiRateLimiter.acquireToken();
+        
         const response = await axios.get('https://www.alphavantage.co/query', {
           params: {
             function: 'GLOBAL_QUOTE',
@@ -177,6 +182,8 @@ class RealTimeMarketDataService {
     if (!this.config.coinGeckoEnabled) return null;
 
     try {
+      await apiRateLimiter.acquireToken();
+      
       const coinId = this.symbolToCoinGeckoId(symbol);
       if (!coinId) return null;
 
@@ -393,6 +400,8 @@ class RealTimeMarketDataService {
     if (!query || query.length < 2) return [];
 
     try {
+      await apiRateLimiter.acquireToken();
+      
       // Search Yahoo Finance
       const response = await axios.get('https://query1.finance.yahoo.com/v1/finance/search', {
         params: {
@@ -448,6 +457,8 @@ class RealTimeMarketDataService {
         return this.getMockNews();
       }
 
+      await apiRateLimiter.acquireToken();
+      
       const response = await axios.get('https://www.alphavantage.co/query', {
         params: {
           function: 'NEWS_SENTIMENT',
