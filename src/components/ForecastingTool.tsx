@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, TrendingUp, Target, DollarSign, Calendar, BarChart3, Download, Settings, AlertTriangle, CheckCircle, Zap } from 'lucide-react';
+import { Calculator, TrendingUp, Target, DollarSign, Calendar, BarChart3, Download, Settings, AlertTriangle, CheckCircle, Zap, RefreshCw } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, ComposedChart, Bar } from 'recharts';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { portfolioEngine } from '../utils/portfolioEngine';
@@ -245,13 +245,11 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
           ))}
         </div>
       </div>
-    </>
-  );
+    );
   };
 
   const renderMonteCarloChart = () => (
-    <>
-      <div className="bg-white rounded-xl shadow-lg p-6">
+    <div className="bg-white rounded-xl shadow-lg p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">Monte Carlo Simulation</h3>
@@ -326,37 +324,37 @@ export const ForecastingTool: React.FC<ForecastingToolProps> = ({ userProfile })
             </ComposedChart>
           </ResponsiveContainer>
         </div>
+      )}
         
-        {/* Forecast Insights */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <h4 className="font-semibold text-blue-900 mb-2">Scenario Analysis</h4>
-            <p className="text-sm text-blue-700">
-              {selectedScenario === 'conservative' ? 'Lower risk approach with steady, predictable growth' :
-               selectedScenario === 'moderate' ? 'Balanced strategy with moderate risk and solid returns' :
-               'Higher risk strategy targeting maximum long-term growth'}
-            </p>
-          </div>
-          
-          <div className="p-4 bg-green-50 rounded-lg">
-            <h4 className="font-semibold text-green-900 mb-2">Key Metrics</h4>
-            <div className="space-y-1 text-sm text-green-700">
-              <div>Expected Return: {scenarios[selectedScenario].return}%</div>
-              <div>Final Value: {formatCurrency(finalValue)}</div>
-              <div>Total Growth: {formatCurrency(totalGrowth)}</div>
-            </div>
-          </div>
-          
-          <div className="p-4 bg-purple-50 rounded-lg">
-            <h4 className="font-semibold text-purple-900 mb-2">Retirement Income</h4>
-            <div className="space-y-1 text-sm text-purple-700">
-              <div>Monthly Income: {formatCurrency(monthlyRetirementIncome)}</div>
-              <div>Goal Achievement: {goalAchievementProbability.toFixed(0)}%</div>
-              <div>Years to Goal: {customInputs.yearsToForecast}</div>
-            </div>
+      {/* Forecast Insights */}
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="p-4 bg-blue-50 rounded-lg">
+          <h4 className="font-semibold text-blue-900 mb-2">Scenario Analysis</h4>
+          <p className="text-sm text-blue-700">
+            {selectedScenario === 'conservative' ? 'Lower risk approach with steady, predictable growth' :
+             selectedScenario === 'moderate' ? 'Balanced strategy with moderate risk and solid returns' :
+             'Higher risk strategy targeting maximum long-term growth'}
+          </p>
+        </div>
+        
+        <div className="p-4 bg-green-50 rounded-lg">
+          <h4 className="font-semibold text-green-900 mb-2">Key Metrics</h4>
+          <div className="space-y-1 text-sm text-green-700">
+            <div>Expected Return: {scenarios[selectedScenario].return}%</div>
+            <div>Final Value: {formatCurrency(finalValue)}</div>
+            <div>Total Growth: {formatCurrency(totalGrowth)}</div>
           </div>
         </div>
-      )}
+        
+        <div className="p-4 bg-purple-50 rounded-lg">
+          <h4 className="font-semibold text-purple-900 mb-2">Retirement Income</h4>
+          <div className="space-y-1 text-sm text-purple-700">
+            <div>Monthly Income: {formatCurrency(monthlyRetirementIncome)}</div>
+            <div>Goal Achievement: {goalAchievementProbability.toFixed(0)}%</div>
+            <div>Years to Goal: {customInputs.yearsToForecast}</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 
