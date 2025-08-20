@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, MessageCircle, BookOpen, BarChart3, LineChart, Briefcase, Calculator, Bot, Menu, X, RefreshCw } from 'lucide-react';
+import { TrendingUp, MessageCircle, BookOpen, BarChart3, LineChart, Briefcase, Calculator, Bot, Menu, X, RefreshCw, DollarSign } from 'lucide-react';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { UserProfile } from '../App';
 
