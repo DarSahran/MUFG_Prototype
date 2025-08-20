@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { TrendingUp, DollarSign, Target, AlertCircle, Star, RefreshCw, MessageCircle, BarChart3, PieChart, Calculator, Activity, ThumbsUp, ThumbsDown, Bot } from 'lucide-react';
 import { AIAdvisorInterface } from './AIAdvisor/AIAdvisorInterface';
+import { SerperChatInterface } from './SerperAIChat/SerperChatInterface';
 import { RealTimeMarketDashboard } from './MarketData/RealTimeMarketDashboard';
 import { serperService, InvestmentRecommendation, MarketInsight } from '../services/serperService';
 import { customBackendAPI } from '../services/customBackendAPI';
@@ -22,6 +23,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
   const [recommendations, setRecommendations] = useState<InvestmentRecommendation[]>([]);
   const [insights, setInsights] = useState<MarketInsight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [refreshCooldown, setRefreshCooldown] = useState(0);
   const [selectedTab, setSelectedTab] = useState<'ai-chat' | 'market-data' | 'recommendations' | 'insights'>('ai-chat');
   
@@ -363,7 +365,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
           )}
           
           <div className="p-4 sm:p-6">
-            {selectedTab === 'ai-chat' && <AIAdvisorInterface userProfile={userProfile} />}
+            {selectedTab === 'ai-chat' && <SerperChatInterface userProfile={userProfile} />}
             {selectedTab === 'market-data' && <RealTimeMarketDashboard userProfile={userProfile} />}
             {selectedTab === 'recommendations' && renderRecommendations()}
             {selectedTab === 'insights' && renderInsights()}
