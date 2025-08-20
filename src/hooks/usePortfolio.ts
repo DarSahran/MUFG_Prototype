@@ -46,17 +46,34 @@ export const usePortfolio = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefreshPortfolio = async () => {
-    if (refreshing) return; // Prevent multiple simultaneous refreshes
+    if (refreshing) {
+      console.log('Refresh already in progress, skipping...');
+      return; // Prevent multiple simultaneous refreshes
+    }
     
     setRefreshing(true);
+    setError(null);
+    
     try {
-      // Update asset prices from custom backend
-      await updateAssetPrices();
+      // Only update prices if we have symbols and haven't updated recently
+      const symbolHoldings = holdings.filter(h => h.symbol);
+      if (symbolHoldings.length > 0) {
+        const lastUpdate = localStorage.getItem('lastPortfolioUpdate');
+        const timeSinceUpdate = lastUpdate ? Date.now() - parseInt(lastUpdate) : Infinity;
+        
+        if (timeSinceUpdate > 300000) { // 5 minutes minimum between updates
+          await updateAssetPrices();
+          localStorage.setItem('lastPortfolioUpdate', Date.now().toString());
+        } else {
+          console.log('Skipping price update - too recent');
+        }
+      }
       
       // Refetch portfolio data
       await fetchPortfolioData();
     } catch (error) {
       console.error('Error refreshing portfolio:', error);
+      setError('Failed to refresh portfolio data');
     } finally {
       setRefreshing(false);
     }
@@ -282,32 +299,46 @@ export const usePortfolio = () => {
   };
 
   const updateAssetPrices = async () => {
-    if (!user || holdings.length === 0) return;
+    if (!user || holdings.length === 0) {
+      console.log('No user or holdings, skipping price update');
+      return;
+    }
 
     try {
       // Get symbols that have them
       const symbolHoldings = holdings.filter(h => h.symbol);
       const symbols = symbolHoldings.map(h => h.symbol!);
       
-      if (symbols.length === 0) return;
+      if (symbols.length === 0) {
+        console.log('No symbols to update');
+        return;
+      }
+      
+      console.log(`Updating prices for ${symbols.length} symbols:`, symbols);
       
       // Fetch latest prices from custom backend
       const quotes = await customBackendAPI.getMultipleQuotes(symbols);
+      console.log('Received quotes:', Object.keys(quotes));
       
       // Update holdings with new prices
       const updatePromises = symbolHoldings.map(async (holding) => {
         const quote = quotes[holding.symbol!];
         if (quote && quote.regularMarketPrice > 0) {
+          console.log(`Updating ${holding.symbol} price: ${holding.currentPrice} -> ${quote.regularMarketPrice}`);
           return updateHolding(holding.id, { 
             currentPrice: quote.regularMarketPrice 
           });
+        } else {
+          console.log(`No valid quote for ${holding.symbol}`);
         }
       });
       
-      await Promise.allSettled(updatePromises);
+      const results = await Promise.allSettled(updatePromises);
+      console.log('Price update results:', results);
       
     } catch (error) {
       console.error('Error updating asset prices:', error);
+      throw error; // Re-throw to be caught by handleRefreshPortfolio
     }
   };
 

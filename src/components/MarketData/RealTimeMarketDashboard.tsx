@@ -20,8 +20,8 @@ export const RealTimeMarketDashboard: React.FC<RealTimeMarketDashboardProps> = (
   
   // Get plan limits for real-time data
   const planLimits = {
-    maxRequests: userPlan?.features.apiCallLimit || 10,
-    resetPeriod: (userPlan?.name === 'Free' ? 'weekly' : 'monthly') as 'weekly' | 'monthly',
+    maxRequests: 2, // Conservative limit
+    resetPeriod: 'daily' as 'daily',
   };
   
   const { 

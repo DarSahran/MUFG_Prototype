@@ -25,6 +25,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
   const [refreshCooldown, setRefreshCooldown] = useState(0);
   const [selectedTab, setSelectedTab] = useState<'ai-chat' | 'market-data' | 'recommendations' | 'insights'>('ai-chat');
   
+  const [lastRefreshTime, setLastRefreshTime] = useState(0);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -73,48 +74,51 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
   };
 
   const loadAIData = async (forceRefresh = false) => {
+    // Check minimum time between requests (1 minute)
+    const timeSinceLastRefresh = Date.now() - lastRefreshTime;
+    if (!forceRefresh && timeSinceLastRefresh < 60000) {
+      const waitTime = Math.ceil((60000 - timeSinceLastRefresh) / 1000);
+      setError(`Please wait ${waitTime} seconds before refreshing again.`);
+      return;
+    }
+
     // Check cooldown unless forced
     if (!forceRefresh && refreshCooldown > 0) {
-      alert(`Please wait ${Math.ceil(refreshCooldown / 60)} more minutes before refreshing AI insights.`);
+      setError(`Please wait ${Math.ceil(refreshCooldown / 60)} more minutes before refreshing AI insights.`);
       return;
     }
 
     // Check plan limits
     if (usageInfo && usageInfo.remaining <= 0) {
-      alert(`You've reached your ${usageInfo.resetPeriod} limit. ${getRemainingTime()}.`);
+      setError(`You've reached your daily limit. ${getRemainingTime()}.`);
       return;
     }
 
     setLoading(true);
+    setError(null);
+    setLastRefreshTime(Date.now());
     
     try {
-      // Set cooldown immediately when refresh starts
-      if (!forceRefresh) {
-        localStorage.setItem('lastAIRefresh', Date.now().toString());
-        // Shorter cooldown for premium users
-        const cooldownTime = userPlan?.name === 'Free' ? 300 : 120; // 5min for free, 2min for premium
-        startCooldownTimer(cooldownTime);
-      }
-
       // Fetch market data from custom backend
       const symbols = ['VAS.AX', 'VGS.AX', 'VAF.AX', 'VGE.AX'];
-      const marketQuotes = await customBackendAPI.getMultipleQuotes(symbols);
-      const marketData = Object.values(marketQuotes);
+      const marketData = await customBackendAPI.getMultipleQuotes(symbols);
       
       const [aiRecommendations, aiInsights] = await Promise.all([
-        serperService.getInvestmentRecommendations(userProfile, marketData),
-        serperService.getMarketInsights(marketData, userProfile)
+        serperService.getInvestmentRecommendations(userProfile, Object.values(marketData)),
+        serperService.getMarketInsights(Object.values(marketData), userProfile)
       ]);
       
       setRecommendations(aiRecommendations);
       setInsights(aiInsights);
+      
+      // Set cooldown after successful request
+      const cooldownTime = userPlan?.name === 'Free' ? 1800 : 600; // 30min for free, 10min for premium
+      startCooldownTimer(cooldownTime);
+      localStorage.setItem('lastAIRefresh', Date.now().toString());
+      
     } catch (error) {
       console.error('Error loading AI data:', error);
-      if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as any).message === 'string') {
-        if ((error as any).message.includes('429') || (error as any).message.includes('Too Many Requests')) {
-          alert('Rate limit exceeded. Please wait before making more requests.');
-        }
-      }
+      setError('Failed to load AI insights. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -296,12 +300,12 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
             <button
               onClick={() => loadAIData()}
               disabled={loading || refreshCooldown > 0 || (usageInfo?.remaining === 0)}
-              className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm sm:text-base"
+              className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">
                 {refreshCooldown > 0 ? `Wait ${Math.ceil(refreshCooldown / 60)}m` : 
-                 usageInfo?.remaining === 0 ? 'Limit Reached' : 'Refresh'}
+                 usageInfo?.remaining === 0 ? 'Daily Limit' : 'Refresh'}
               </span>
               <span className="sm:hidden">
                 {refreshCooldown > 0 ? `${Math.ceil(refreshCooldown / 60)}m` : 
@@ -342,17 +346,17 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
           
           {/* Usage Status */}
           {usageInfo && (
-            <div className="px-6 py-3 bg-blue-50 border-t border-blue-200">
+            <div className="px-6 py-3 bg-slate-50 border-t border-slate-200">
               <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-2 text-blue-700">
+                <div className="flex items-center space-x-2 text-slate-700">
                   <AlertCircle className="w-4 h-4" />
                   <span>
-                    AI Queries: {usageInfo.remaining}/{usageInfo.limit} remaining this {usageInfo.resetPeriod}
+                    Daily Queries: {usageInfo.remaining}/{usageInfo.limit} remaining
                   </span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-blue-600">{usageInfo.planName} Plan</span>
-                  <span className="text-xs text-blue-500">• {getRemainingTime()}</span>
+                  <span className="text-slate-600">{usageInfo.planName} Plan</span>
+                  <span className="text-xs text-slate-500">• {getRemainingTime()}</span>
                 </div>
               </div>
             </div>

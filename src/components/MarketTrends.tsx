@@ -58,8 +58,19 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
   }, [selectedAssets, timeframe]);
 
   const loadMarketData = async () => {
+    // Check if we've loaded data recently to prevent excessive requests
+    const lastLoad = localStorage.getItem('lastMarketDataLoad');
+    const timeSinceLoad = lastLoad ? Date.now() - parseInt(lastLoad) : Infinity;
+    
+    if (timeSinceLoad < 300000) { // 5 minutes minimum between loads
+      console.log('Skipping market data load - too recent');
+      return;
+    }
+
     setLoading(true);
     try {
+      localStorage.setItem('lastMarketDataLoad', Date.now().toString());
+      
       // Use custom backend API for market data
       const quotes = await customBackendAPI.getMultipleQuotes(selectedAssets);
       const stocks = Object.values(quotes).map(quote => ({

@@ -56,9 +56,18 @@ export const AIAdvisorInterface: React.FC<AIAdvisorInterfaceProps> = ({ userProf
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
 
+    // Check minimum time between requests (30 seconds)
+    const timeSinceLastMessage = messages.length > 0 ? 
+      Date.now() - messages[messages.length - 1].timestamp.getTime() : Infinity;
+    
+    if (timeSinceLastMessage < 30000) {
+      setError('Please wait 30 seconds between AI queries.');
+      return;
+    }
+
     // Check if user can make request
     if (!canMakeRequest()) {
-      setShowUpgradeModal(true);
+      setError(`Daily query limit reached. You can make ${usageInfo?.limit || 2} queries per day.`);
       return;
     }
 
@@ -72,6 +81,7 @@ export const AIAdvisorInterface: React.FC<AIAdvisorInterfaceProps> = ({ userProf
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setIsTyping(true);
+    setError(null);
 
     try {
       const portfolioValue = getTotalPortfolioValue();
@@ -101,6 +111,7 @@ export const AIAdvisorInterface: React.FC<AIAdvisorInterfaceProps> = ({ userProf
       }
     } catch (err) {
       console.error('Error sending message:', err);
+      setError('Failed to get AI response. Please try again.');
     } finally {
       setIsTyping(false);
     }
@@ -177,37 +188,21 @@ export const AIAdvisorInterface: React.FC<AIAdvisorInterfaceProps> = ({ userProf
             <div className="flex items-center space-x-2">
               <AlertCircle className="w-4 h-4 text-orange-600" />
               <span className="text-sm text-orange-800">
-                Only {usageInfo.remaining} queries remaining this {usageInfo.resetPeriod}. 
-                {usageInfo.resetPeriod === 'weekly' ? ' Resets weekly.' : ' Consider upgrading your plan.'}
+                Only {usageInfo.remaining} queries remaining today. Resets tomorrow.
               </span>
-              {usageInfo.planName === 'Free' && (
-                <button 
-                  onClick={() => setShowUpgradeModal(true)}
-                  className="ml-auto text-sm text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  Upgrade
-                </button>
-              )}
             </div>
           </div>
         )}
 
         {usageInfo && usageInfo.remaining === 0 && (
           <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center space-x-2">
               <div className="flex items-center space-x-2">
                 <AlertCircle className="w-4 h-4 text-red-600" />
                 <span className="text-sm text-red-800">
-                  You've reached your {usageInfo.resetPeriod} query limit. {getRemainingTime()}.
+                  You've reached your daily query limit. Try again tomorrow.
                 </span>
               </div>
-              <button 
-                onClick={() => setShowUpgradeModal(true)}
-                className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-              >
-                <Crown className="w-3 h-3" />
-                <span>Upgrade Plan</span>
-              </button>
             </div>
           </div>
         )}

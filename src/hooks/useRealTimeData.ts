@@ -29,11 +29,11 @@ interface UseRealTimeDataOptions {
 
 export const useRealTimeData = ({
   symbols,
-  interval = 30000, // 30 seconds
+  interval = 300000, // 5 minutes to reduce API calls
   enabled = true,
   assetTypes = {},
   regions = {},
-  planLimits = { maxRequests: 10, resetPeriod: 'weekly' },
+  planLimits = { maxRequests: 2, resetPeriod: 'daily' },
 }: UseRealTimeDataOptions) => {
   const [prices, setPrices] = useState<{ [symbol: string]: RealTimePrice }>({});
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -42,6 +42,7 @@ export const useRealTimeData = ({
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('disconnected');
   const [requestCount, setRequestCount] = useState(0);
   const [lastResetTime, setLastResetTime] = useState<Date>(new Date());
+  const [lastRequestTime, setLastRequestTime] = useState<number>(0);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const requestTimestamps = useRef<number[]>([]);
@@ -49,14 +50,23 @@ export const useRealTimeData = ({
   useEffect(() => {
     if (!enabled || symbols.length === 0) return;
 
-    startRealTimeUpdates();
+    // Only start if we haven't made a request recently
+    const timeSinceLastRequest = Date.now() - lastRequestTime;
+    if (timeSinceLastRequest > 60000) { // 1 minute minimum between starts
+      startRealTimeUpdates();
+    }
 
     return () => {
       cleanup();
     };
-  }, [symbols, interval, enabled, planLimits]);
+  }, [symbols, enabled]); // Removed interval and planLimits to prevent restarts
 
   const startRealTimeUpdates = async () => {
+    if (!canMakeRequest()) {
+      setError(`Daily limit reached (${requestCount}/${planLimits.maxRequests}). Try again tomorrow.`);
+      return;
+    }
+
     setConnectionStatus('connecting');
     setLoading(true);
     setError(null);
@@ -65,12 +75,14 @@ export const useRealTimeData = ({
       // Initial price fetch
       await fetchPricesFromBackend();
       
-      // Set up interval for updates
+      // Set up interval for updates - much longer interval
       intervalRef.current = setInterval(() => {
         if (canMakeRequest()) {
           fetchPricesFromBackend();
+        } else {
+          cleanup(); // Stop updates when limit reached
         }
-      }, interval);
+      }, Math.max(interval, 300000)); // Minimum 5 minutes
       
       setLastUpdate(new Date());
       setConnectionStatus('connected');
@@ -84,7 +96,13 @@ export const useRealTimeData = ({
   };
 
   const fetchPricesFromBackend = async () => {
+    if (!canMakeRequest()) {
+      setError(`Daily limit reached. You can make ${planLimits.maxRequests} requests per day.`);
+      return;
+    }
+
     try {
+      setLastRequestTime(Date.now());
       const quotes = await customBackendAPI.getMultipleQuotes(symbols);
       const convertedPrices: { [symbol: string]: RealTimePrice } = {};
       
@@ -119,7 +137,9 @@ export const useRealTimeData = ({
   const canMakeRequest = (): boolean => {
     // Clean old timestamps
     const now = Date.now();
-    const resetPeriodMs = planLimits.resetPeriod === 'weekly' ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000;
+    const resetPeriodMs = planLimits.resetPeriod === 'daily' ? 24 * 60 * 60 * 1000 : 
+                         planLimits.resetPeriod === 'weekly' ? 7 * 24 * 60 * 60 * 1000 : 
+                         30 * 24 * 60 * 60 * 1000;
     
     requestTimestamps.current = requestTimestamps.current.filter(
       timestamp => now - timestamp < resetPeriodMs
@@ -142,8 +162,14 @@ export const useRealTimeData = ({
   };
 
   const refreshPrices = async () => {
+    const timeSinceLastRequest = Date.now() - lastRequestTime;
+    if (timeSinceLastRequest < 60000) { // 1 minute cooldown
+      setError('Please wait 1 minute between manual refreshes.');
+      return;
+    }
+
     if (!canMakeRequest()) {
-      setError(`Request limit reached. You can make ${planLimits.maxRequests} requests per ${planLimits.resetPeriod}.`);
+      setError(`Daily limit reached (${requestCount}/${planLimits.maxRequests}). Try again tomorrow.`);
       return;
     }
     
@@ -168,6 +194,7 @@ export const useRealTimeData = ({
     refreshPrices,
     requestCount,
     maxRequests: planLimits.maxRequests,
+    lastRequestTime,
     canMakeRequest: canMakeRequest(),
     isConnected: connectionStatus === 'connected',
   };
