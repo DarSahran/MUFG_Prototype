@@ -4,6 +4,7 @@ import { geminiService, InvestmentRecommendation, MarketInsight } from '../servi
 import { marketDataService } from '../services/marketData';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { calculationEngine } from '../utils/portfolioEngine';
+import { apiRateLimiter } from '../utils/apiRateLimiter';
 import { UserProfile } from '../App';
 
 interface CombinedAIProps {
@@ -49,7 +50,12 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
   const [recommendations, setRecommendations] = useState<InvestmentRecommendation[]>([]);
   const [insights, setInsights] = useState<MarketInsight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshCooldown, setRefreshCooldown] = useState(0);
+  const [rateLimitInfo, setRateLimitInfo] = useState({ remaining: 10, queueLength: 0 });
   const [selectedTab, setSelectedTab] = useState<'recommendations' | 'insights' | 'chat'>('recommendations');
+  
+  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load user context data
   useEffect(() => {
@@ -82,12 +88,74 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
   };
   useEffect(() => { scrollToBottom(); }, [messages]);
 
-  // Load AI Data
-  useEffect(() => { loadAIData(); }, [userProfile]);
+  // Load AI Data and setup cooldown
+  useEffect(() => { 
+    initializeRefreshState();
+    loadAIData(); 
+  }, [userProfile]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+      if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+    };
+  }, []);
+
+  const initializeRefreshState = () => {
+    const lastRefresh = localStorage.getItem('lastAIRefresh');
+    if (lastRefresh) {
+      const timeSinceRefresh = Date.now() - parseInt(lastRefresh);
+      const cooldownTime = 2 * 60 * 1000; // 2 minutes
+      
+      if (timeSinceRefresh < cooldownTime) {
+        const remainingCooldown = Math.ceil((cooldownTime - timeSinceRefresh) / 1000);
+        setRefreshCooldown(remainingCooldown);
+        startCooldownTimer(remainingCooldown);
+      }
+    }
+  };
+
+  const startCooldownTimer = (seconds: number) => {
+    setRefreshCooldown(seconds);
+    
+    if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+    
+    cooldownTimerRef.current = setInterval(() => {
+      setRefreshCooldown(prev => {
+        if (prev <= 1) {
+          if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const updateRateLimitInfo = () => {
+    setRateLimitInfo({
+      remaining: apiRateLimiter.getRemainingRequests(),
+      queueLength: apiRateLimiter.getQueueLength(),
+    });
+  };
   
-  const loadAIData = async () => {
+  const loadAIData = async (forceRefresh = false) => {
+    // Check cooldown unless forced
+    if (!forceRefresh && refreshCooldown > 0) {
+      alert(`Please wait ${Math.ceil(refreshCooldown / 60)} more minutes before refreshing.`);
+      return;
+    }
+
     setLoading(true);
+    updateRateLimitInfo();
+    
     try {
+      // Set cooldown immediately when refresh starts
+      if (!forceRefresh) {
+        localStorage.setItem('lastAIRefresh', Date.now().toString());
+        startCooldownTimer(120); // 2 minutes
+      }
+
       const marketData = await Promise.all([
         marketDataService.getStockQuote('VAS.AX'),
         marketDataService.getStockQuote('VGS.AX'),
@@ -108,8 +176,15 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
       ]);
       setRecommendations(aiRecommendations);
       setInsights(aiInsights);
+      
+      updateRateLimitInfo();
     } catch (error) {
       console.error('Error loading AI data:', error);
+      
+      // If error due to rate limiting, show helpful message
+      if (error.message?.includes('429') || error.message?.includes('Too Many Requests')) {
+        alert('Rate limit exceeded. Please wait before making more requests.');
+      }
     } finally {
       setLoading(false);
     }
@@ -295,7 +370,7 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
                 </div>
                 <p className="text-slate-700 text-xs sm:text-sm mb-4">{rec.reasoning}</p>
                 <div className="space-y-2 text-sm">
-                  {rec.targetPrice && (
+                  {rec.targetPrice && typeof rec.targetPrice === 'number' && (
                     <div className="flex justify-between">
                       <span className="text-slate-600">Target Price:</span>
                       <span className="font-medium text-slate-900">${rec.targetPrice.toFixed(2)}</span>
@@ -582,14 +657,28 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
               <p className="text-sm sm:text-base text-slate-600">
                 Personalized recommendations for your $${(contextData?.portfolioValue || 0).toLocaleString()} portfolio
               </p>
+              {rateLimitInfo.remaining < 5 && (
+                <div className="mt-2 flex items-center space-x-2 text-xs text-orange-600">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>API requests remaining: {rateLimitInfo.remaining}</span>
+                  {rateLimitInfo.queueLength > 0 && (
+                    <span>• {rateLimitInfo.queueLength} queued</span>
+                  )}
+                </div>
+              )}
             </div>
             <button
-              onClick={loadAIData}
-              disabled={loading}
+              onClick={() => loadAIData()}
+              disabled={loading || refreshCooldown > 0}
               className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm sm:text-base"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
+              <span className="hidden sm:inline">
+                {refreshCooldown > 0 ? `Wait ${Math.ceil(refreshCooldown / 60)}m` : 'Refresh'}
+              </span>
+              <span className="sm:hidden">
+                {refreshCooldown > 0 ? `${Math.ceil(refreshCooldown / 60)}m` : 'Refresh'}
+              </span>
             </button>
           </div>
         </div>
@@ -621,6 +710,22 @@ export const CombinedAI: React.FC<CombinedAIProps> = ({ userProfile }) => {
               })}
             </nav>
           </div>
+          
+          {/* Rate Limit Status */}
+          {(rateLimitInfo.remaining < 5 || rateLimitInfo.queueLength > 0) && (
+            <div className="px-6 py-3 bg-orange-50 border-t border-orange-200">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2 text-orange-700">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>API Rate Limit: {rateLimitInfo.remaining}/10 requests remaining</span>
+                </div>
+                {rateLimitInfo.queueLength > 0 && (
+                  <span className="text-orange-600">{rateLimitInfo.queueLength} requests queued</span>
+                )}
+              </div>
+            </div>
+          )}
+          
           <div className="p-4 sm:p-6">
             {selectedTab === 'recommendations' && renderRecommendations()}
             {selectedTab === 'insights' && renderInsights()}

@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { apiRateLimiter } from '../utils/apiRateLimiter';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'demo-key';
 const genAI = new GoogleGenerativeAI(API_KEY);
@@ -33,6 +34,8 @@ class GeminiService {
   async getInvestmentRecommendations(userProfile: any, marketData: any[]): Promise<InvestmentRecommendation[]> {
     // Enhanced prompt with more context
     try {
+      await apiRateLimiter.acquireToken();
+      
       const prompt = `
         As a professional financial advisor, analyze the following user profile and current market data to provide investment recommendations:
 
@@ -109,6 +112,8 @@ class GeminiService {
 
   async getMarketInsights(marketData: any[], userProfile?: any): Promise<MarketInsight[]> {
     try {
+      await apiRateLimiter.acquireToken();
+      
       const prompt = `
         As a financial market analyst, provide 4-6 key market insights based on the current market data:
 
@@ -173,6 +178,8 @@ class GeminiService {
 
   async answerFinancialQuestion(question: string, userProfile?: any, context?: string): Promise<string> {
     try {
+      await apiRateLimiter.acquireToken();
+      
       const prompt = `
         As a qualified financial advisor specializing in Australian superannuation and investments, answer the following question:
 
