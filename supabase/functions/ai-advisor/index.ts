@@ -159,53 +159,31 @@ Deno.serve(async (req: Request) => {
 
 async function checkUserLimits(userId: string): Promise<{ allowed: boolean; message: string; remaining: number }> {
   try {
-    // Get user's plan and current usage
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select(`
-        plan_id,
-        plans!inner(name, api_call_limit)
-      `)
-      .eq('user_id', userId)
+    // Use the database function to get plan info
+    const { data: planInfo, error: planError } = await supabase
+      .rpc('get_user_plan_info', { p_user_id: userId })
       .single();
 
-    if (profileError) {
-      console.error('Error fetching user profile:', profileError);
-      return { allowed: false, message: 'User profile not found', remaining: 0 };
+    if (planError) {
+      console.error('Error fetching plan info:', planError);
+      return { allowed: true, message: 'Error checking limits, allowing request', remaining: 999 };
     }
 
-    if (!profile) {
-      return { allowed: false, message: 'User profile not found', remaining: 0 };
+    if (!planInfo) {
+      return { allowed: false, message: 'User plan not found', remaining: 0 };
     }
 
-    const plan = profile.plans as any;
-    const apiLimit = plan.api_call_limit;
+    const { plan_name, api_call_limit, current_calls, remaining_calls } = planInfo;
 
-    // Get current usage for this billing period
-    const { data: usage, error: usageError } = await supabase
-      .from('api_usage_tracking')
-      .select('current_calls')
-      .eq('user_id', userId)
-      .gte('billing_period_end', new Date().toISOString())
-      .single();
-
-    if (usageError && usageError.code !== 'PGRST116') {
-      console.error('Error fetching usage data:', usageError);
-      return { allowed: false, message: 'Error checking API limits', remaining: 0 };
-    }
-
-    const currentCalls = usage?.current_calls || 0;
-    const remaining = Math.max(0, apiLimit - currentCalls);
-
-    if (currentCalls >= apiLimit) {
+    if (remaining_calls <= 0) {
       return {
         allowed: false,
-        message: `You've reached your ${plan.name} plan limit of ${apiLimit} AI queries this month. Upgrade your plan for more queries.`,
+        message: `You've reached your ${plan_name} plan limit of ${api_call_limit} AI queries this month. Upgrade your plan for more queries.`,
         remaining: 0
       };
     }
 
-    return { allowed: true, message: 'Within limits', remaining };
+    return { allowed: true, message: 'Within limits', remaining: remaining_calls };
   } catch (error) {
     console.error('Error checking user limits:', error);
     return { allowed: true, message: 'Error checking limits, allowing request', remaining: 999 };
@@ -538,12 +516,18 @@ function getFallbackResponse(query: string): FinancialResponse {
 
 async function incrementUserAPIUsage(userId: string): Promise<void> {
   try {
-    const { error } = await supabase.rpc('increment_api_usage', { p_user_id: userId });
+    const { data, error } = await supabase.rpc('increment_api_usage', { p_user_id: userId });
     if (error) {
       console.error('Error incrementing API usage:', error);
+      throw error;
+    }
+    
+    if (!data) {
+      throw new Error('API limit exceeded');
     }
   } catch (error) {
     console.error('Error calling increment_api_usage function:', error);
+    throw error;
   }
 }
 
