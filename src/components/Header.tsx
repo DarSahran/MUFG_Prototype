@@ -24,6 +24,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, use
     { id: 'market', label: 'Market', icon: LineChart },    
     { id: 'forecasting', label: 'Forecasting', icon: Calculator },    
     { id: 'education', label: 'Learn', icon: BookOpen },
+    { id: 'pricing', label: 'Pricing', icon: DollarSign },
   ];
 
   const handleRefreshPortfolio = async () => {

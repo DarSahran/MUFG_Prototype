@@ -15,6 +15,7 @@ import { ForecastingTool } from './components/ForecastingTool';
 import { CombinedAI } from './components/CombinedAI';
 import { AIRecommendations } from './components/AIRecommendations/AIRecommendations';
 import ProfilePage from './components/ProfilePage';
+import { PricingPage } from './components/PricingPage';
 
 import { useAuth } from './hooks/useAuth';
 import { useUserProfile } from './hooks/useUserProfile';
@@ -47,6 +48,7 @@ export type UserProfile = {
 
 
 type View = 'landing' | 'onboarding' | 'dashboard' | 'combined-ai' | 'education' | 'login' | 'signup' | 'forgot' | 'profile' | 'market' | 'investments' | 'forecasting';
+type View = 'landing' | 'onboarding' | 'dashboard' | 'combined-ai' | 'education' | 'login' | 'signup' | 'forgot' | 'profile' | 'market' | 'investments' | 'forecasting' | 'pricing';
 
 
 function App() {
@@ -154,6 +156,8 @@ function App() {
         return <ForecastingTool userProfile={userProfile} />;
       case 'profile':
         return <ProfilePage userProfile={userProfile} />;
+      case 'pricing':
+        return <PricingPage />;
       default:
         return <EnhancedDashboard userProfile={userProfile} />;
     }
