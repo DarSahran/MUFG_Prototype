@@ -101,6 +101,11 @@ export const RealTimeMarketDashboard: React.FC<RealTimeMarketDashboardProps> = (
     return `${sign}${formatPrice(change)} (${sign}${changePercent.toFixed(2)}%)`;
   };
 
+  const getRemainingTime = () => {
+    // Mock function - would calculate actual reset time
+    return 'Resets in 2 hours';
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -442,119 +447,6 @@ export const RealTimeMarketDashboard: React.FC<RealTimeMarketDashboardProps> = (
           reason="realtime_access"
         />
       )}
-    </div>
-  );
-};
-
-                <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
-                  <div className="flex items-center space-x-1">
-                    <Activity className="w-3 h-3 text-green-500" />
-                    <span>Live</span>
-                  </div>
-                  {lastUpdate && (
-                    <span>{lastUpdate.toLocaleTimeString()}</span>
-                  )}
-                </div>
-              )}
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Market Chart */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-slate-900">Market Trends</h3>
-          <div className="flex items-center space-x-2 text-sm text-slate-600">
-            {hasRealtimeAccess ? (
-              <>
-                <Activity className="w-4 h-4 text-green-500" />
-                <span>Real-time Updates</span>
-              </>
-            ) : (
-              <>
-                <Clock className="w-4 h-4 text-slate-500" />
-                <span>Delayed Data</span>
-              </>
-            )}
-          </div>
-        </div>
-        
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="time"
-                stroke="#64748b"
-                fontSize={12}
-              />
-              <YAxis 
-                tickFormatter={formatPrice}
-                stroke="#64748b"
-                fontSize={12}
-              />
-              <Tooltip
-                formatter={(value: number, name: string) => [formatPrice(value), name]}
-                labelFormatter={(label) => `Time: ${label}`}
-                contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                }}
-              />
-              {selectedSymbols.map((symbol, index) => {
-                const asset = availableSymbols.find(a => a.symbol === symbol);
-                return (
-                  <Line
-                    key={symbol}
-                    type="monotone"
-                    dataKey={symbol}
-                    stroke={asset?.color || '#64748b'}
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 4, fill: asset?.color }}
-                  />
-                );
-              })}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Market News */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex items-center space-x-3 mb-6">
-          <Globe className="w-5 h-5 text-blue-600" />
-          <h3 className="text-lg font-semibold text-slate-900">Market News & Analysis</h3>
-        </div>
-        
-        <div className="space-y-4">
-          {/* Mock news items - would be populated from Serper news API */}
-          <div className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-            <h4 className="font-medium text-slate-900 mb-2">ASX 200 Reaches New High Amid Strong Earnings</h4>
-            <p className="text-sm text-slate-600 mb-3">
-              The Australian stock market continues its upward trajectory with strong corporate earnings driving investor confidence.
-            </p>
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <span>Financial Review</span>
-              <span>{new Date().toLocaleDateString()}</span>
-            </div>
-          </div>
-          
-          <div className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-            <h4 className="font-medium text-slate-900 mb-2">RBA Holds Interest Rates Steady</h4>
-            <p className="text-sm text-slate-600 mb-3">
-              The Reserve Bank maintains the cash rate at 4.35%, citing balanced economic conditions.
-            </p>
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <span>ABC News</span>
-              <span>{new Date().toLocaleDateString()}</span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
