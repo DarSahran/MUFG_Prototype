@@ -17,17 +17,34 @@ interface AssetTrendChartProps {
   timeframe: '1D' | '1W' | '1M' | '3M' | '6M' | '1Y';
 }
 
-// Real-time price service
-class RealTimePriceService {
-  private static instance: RealTimePriceService;
-  private priceCache = new Map<string, { price: number; timestamp: number }>();
-  private subscribers = new Set<(prices: Map<string, number>) => void>();
+// Custom API Response interface
+interface CustomAPIResponse {
+  source: string;
+  symbol: string;
+  currency: string;
+  regularMarketPrice: number;
+  open: number;
+  previousClose: number;
+  dayHigh: number;
+  dayLow: number;
+}
 
-  static getInstance(): RealTimePriceService {
-    if (!RealTimePriceService.instance) {
-      RealTimePriceService.instance = new RealTimePriceService();
+// Real-time price service using your custom yfinance API
+class CustomPriceService {
+  private static instance: CustomPriceService;
+  private priceCache = new Map<string, { price: number; timestamp: number; data: CustomAPIResponse }>();
+  private subscribers = new Set<(prices: Map<string, number>) => void>();
+  private baseURL: string;
+
+  constructor(baseURL?: string) {
+    this.baseURL = baseURL || 'https://mufg-hackathon-backend-q8zxhtuu6-darsahrans-projects.vercel.app';
+  }
+
+  static getInstance(baseURL?: string): CustomPriceService {
+    if (!CustomPriceService.instance) {
+      CustomPriceService.instance = new CustomPriceService(baseURL);
     }
-    return RealTimePriceService.instance;
+    return CustomPriceService.instance;
   }
 
   subscribe(callback: (prices: Map<string, number>) => void) {
@@ -45,130 +62,138 @@ class RealTimePriceService {
 
   async fetchLivePrice(symbol: string): Promise<number | null> {
     try {
-      // Check cache first (valid for 1 minute)
+      // Check cache first (valid for 30 seconds for real-time updates)
       const cached = this.priceCache.get(symbol);
-      if (cached && Date.now() - cached.timestamp < 60000) {
+      if (cached && Date.now() - cached.timestamp < 30000) {
         return cached.price;
       }
 
-      let price: number | null = null;
+      console.log(`Fetching live price for ${symbol} from custom API`);
+      
+      const response = await fetch(
+        `${this.baseURL}/api/quote?symbol=${encodeURIComponent(symbol)}`
+      );
 
-      // Fetch crypto prices from CoinGecko
-      if (symbol.endsWith('-USD') || this.isCrypto(symbol)) {
-        price = await this.fetchCryptoPrice(symbol);
-      }
-      // Fetch stock prices from Yahoo Finance
-      else {
-        price = await this.fetchStockPrice(symbol);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      if (price !== null) {
-        this.priceCache.set(symbol, { price, timestamp: Date.now() });
+      const data: CustomAPIResponse = await response.json();
+      
+      if (data && data.regularMarketPrice) {
+        console.log(`✅ Custom API price for ${symbol}: $${data.regularMarketPrice} ${data.currency}`);
+        
+        this.priceCache.set(symbol, { 
+          price: data.regularMarketPrice, 
+          timestamp: Date.now(),
+          data
+        });
+        
         this.notifySubscribers();
+        return data.regularMarketPrice;
       }
 
-      return price;
+      console.warn(`⚠️ No price data available for ${symbol}`);
+      return null;
     } catch (error) {
-      console.error(`Error fetching price for ${symbol}:`, error);
+      console.error(`❌ Error fetching price for ${symbol}:`, error);
       return null;
     }
   }
 
-  private async fetchCryptoPrice(symbol: string): Promise<number | null> {
-    const cryptoMapping: Record<string, string> = {
-      'BTC-USD': 'bitcoin',
-      'ETH-USD': 'ethereum',
-      'BNB-USD': 'binancecoin',
-      'ADA-USD': 'cardano',
-      'SOL-USD': 'solana',
-      'MATIC-USD': 'matic-network',
-      'DOT-USD': 'polkadot',
-      'AVAX-USD': 'avalanche-2',
-      'LINK-USD': 'chainlink',
-      'UNI-USD': 'uniswap'
-    };
-
-    const coinId = cryptoMapping[symbol] || symbol.toLowerCase().replace('-usd', '');
-
-    // Try CoinGecko first
+  async fetchHistoricalData(symbol: string, timeframe: string): Promise<any[]> {
     try {
-      const response = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const priceData = data[coinId];
-        if (priceData && priceData.usd) {
-          return priceData.usd;
-        }
+      console.log(`Fetching historical data for ${symbol} (${timeframe}) from custom API`);
+      
+      // For now, use current price to generate historical trend
+      // You can extend your backend to provide historical data
+      const currentPrice = await this.fetchLivePrice(symbol);
+      
+      if (!currentPrice) {
+        return [];
       }
+
+      return this.generateHistoricalFromCurrentPrice(symbol, currentPrice, timeframe);
     } catch (error) {
-      console.warn(`CoinGecko failed for ${symbol}, trying Coinbase`);
+      console.error(`Error fetching historical data for ${symbol}:`, error);
+      return [];
     }
-
-    // Fallback to Coinbase
-    try {
-      const response = await fetch(
-        `https://api.coinbase.com/v2/exchange-rates?currency=${symbol.replace('-USD', '')}`
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const rate = data.data?.rates?.USD;
-        if (rate) {
-          return parseFloat(rate);
-        }
-      }
-    } catch (error) {
-      console.warn(`Coinbase failed for ${symbol}`);
-    }
-
-    return null;
   }
 
-  private async fetchStockPrice(symbol: string): Promise<number | null> {
-    // Try Yahoo Finance API
-    try {
-      const response = await fetch(
-        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbol}`
-      );
+  private generateHistoricalFromCurrentPrice(symbol: string, currentPrice: number, timeframe: string): any[] {
+    const days = this.getTimeframeDays(timeframe);
+    const data = [];
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
 
-      if (response.ok) {
-        const data = await response.json();
-        const quote = data.quoteResponse?.result?.[0];
-        if (quote && quote.regularMarketPrice) {
-          return quote.regularMarketPrice;
-        }
+    // Get cached data for additional context
+    const cached = this.priceCache.get(symbol);
+    const previousClose = cached?.data?.previousClose || currentPrice;
+    const dayHigh = cached?.data?.dayHigh || currentPrice;
+    const dayLow = cached?.data?.dayLow || currentPrice;
+
+    for (let i = 0; i <= days; i++) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + i);
+      
+      // Generate realistic historical prices based on current market data
+      const progress = i / days; // 0 to 1
+      const volatility = this.getVolatilityForSymbol(symbol);
+      
+      // Create a trend that ends at current price
+      const trendComponent = (currentPrice - previousClose) * progress;
+      const randomComponent = (Math.random() - 0.5) * volatility * currentPrice;
+      const cyclicalComponent = Math.sin(i / 5) * (dayHigh - dayLow) * 0.3;
+      
+      let price = previousClose + trendComponent + randomComponent + cyclicalComponent;
+      
+      // Ensure reasonable bounds
+      price = Math.max(price, currentPrice * 0.8);
+      price = Math.min(price, currentPrice * 1.2);
+      
+      // Last data point should be current price
+      if (i === days) {
+        price = currentPrice;
       }
-    } catch (error) {
-      console.warn(`Yahoo Finance failed for ${symbol}`);
+      
+      data.push({
+        date: date.toISOString().split('T')[0],
+        timestamp: date.getTime(),
+        formattedDate: date.toLocaleDateString('en-AU', {
+          month: 'short',
+          day: 'numeric'
+        }),
+        price: Math.round(price * 100) / 100,
+        volume: Math.floor(Math.random() * 1000000) + 100000
+      });
     }
 
-    // Fallback to Alpha Vantage (requires API key)
-    try {
-      const API_KEY = process.env.REACT_APP_ALPHA_VANTAGE_KEY || 'demo';
-      const response = await fetch(
-        `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${API_KEY}`
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const price = data['Global Quote']?.[0]?.['05. price'];
-        if (price) {
-          return parseFloat(price);
-        }
-      }
-    } catch (error) {
-      console.warn(`Alpha Vantage failed for ${symbol}`);
-    }
-
-    return null;
+    return data;
   }
 
-  private isCrypto(symbol: string): boolean {
-    const cryptoSymbols = ['BTC', 'ETH', 'BNB', 'ADA', 'SOL', 'MATIC', 'DOT', 'AVAX', 'LINK', 'UNI'];
-    return cryptoSymbols.some(crypto => symbol.toUpperCase().includes(crypto));
+  private getVolatilityForSymbol(symbol: string): number {
+    // Different volatility based on asset type
+    if (symbol.endsWith('-USD')) return 0.05; // Crypto - higher volatility
+    if (symbol.endsWith('.AX')) return 0.015; // ASX - moderate volatility
+    return 0.02; // Default stocks
+  }
+
+  private getTimeframeDays(timeframe: string): number {
+    switch (timeframe) {
+      case '1D': return 1;
+      case '1W': return 7;
+      case '1M': return 30;
+      case '3M': return 90;
+      case '6M': return 180;
+      case '1Y': return 365;
+      default: return 30;
+    }
+  }
+
+  // Get additional market data from cache
+  getMarketData(symbol: string) {
+    const cached = this.priceCache.get(symbol);
+    return cached?.data || null;
   }
 }
 
@@ -183,14 +208,25 @@ export const AssetTrendChart: React.FC<AssetTrendChartProps> = ({
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'error' | 'loading'>('loading');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [marketData, setMarketData] = useState<Map<string, any>>(new Map());
 
-  const priceService = RealTimePriceService.getInstance();
+  const priceService = CustomPriceService.getInstance();
 
   // Subscribe to live price updates
   useEffect(() => {
     const unsubscribe = priceService.subscribe((prices) => {
       setLivePrices(new Map(prices));
       setLastUpdated(new Date());
+      
+      // Update market data
+      const newMarketData = new Map<string, any>();
+      prices.forEach((price, symbol) => {
+        const data = priceService.getMarketData(symbol);
+        if (data) {
+          newMarketData.set(symbol, data);
+        }
+      });
+      setMarketData(newMarketData);
     });
 
     return unsubscribe;
@@ -200,10 +236,10 @@ export const AssetTrendChart: React.FC<AssetTrendChartProps> = ({
   useEffect(() => {
     fetchRealTimeData();
     
-    // Set up interval for live price updates
+    // Set up interval for live price updates (every 30 seconds)
     const interval = setInterval(() => {
       updateLivePrices();
-    }, 30000); // Update every 30 seconds
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [holdings, selectedTimeframe]);
@@ -213,21 +249,47 @@ export const AssetTrendChart: React.FC<AssetTrendChartProps> = ({
     setConnectionStatus('loading');
 
     try {
-      // Fetch live prices for all holdings
-      const pricePromises = holdings.slice(0, 5).map(holding => 
+      const displayHoldings = holdings.slice(0, 5);
+      
+      if (displayHoldings.length === 0) {
+        setChartData([]);
+        setConnectionStatus('error');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('🚀 Fetching data for holdings:', displayHoldings.map(h => h.symbol || h.name));
+
+      // Fetch historical data for each holding
+      const historicalDataPromises = displayHoldings.map(async (holding) => {
+        try {
+          const symbol = holding.symbol || holding.name;
+          const data = await priceService.fetchHistoricalData(symbol, selectedTimeframe);
+          return { holding, data };
+        } catch (error) {
+          console.warn(`Failed to fetch historical data for ${holding.symbol || holding.name}:`, error);
+          return { holding, data: [] };
+        }
+      });
+
+      const results = await Promise.all(historicalDataPromises);
+      
+      // Also fetch current live prices
+      const pricePromises = displayHoldings.map(holding => 
         priceService.fetchLivePrice(holding.symbol || holding.name)
       );
-
-      const prices = await Promise.all(pricePromises);
+      const currentPrices = await Promise.all(pricePromises);
       
-      // Generate historical data with current prices
-      const data = generateHistoricalData(holdings.slice(0, 5), prices);
+      console.log('💰 Current prices:', currentPrices);
       
-      setChartData(data);
+      // Generate chart data
+      const chartData = generateChartData(results, currentPrices, displayHoldings);
+      
+      setChartData(chartData);
       setConnectionStatus('connected');
       setLastUpdated(new Date());
     } catch (error) {
-      console.error('Error fetching real-time data:', error);
+      console.error('❌ Error fetching real-time data:', error);
       setConnectionStatus('error');
       
       // Fallback to simulated data
@@ -255,8 +317,44 @@ export const AssetTrendChart: React.FC<AssetTrendChartProps> = ({
     }
   }, [holdings, priceService]);
 
-  const generateHistoricalData = (displayHoldings: AssetHolding[], currentPrices: (number | null)[]) => {
-    const days = getTimeframeDays(selectedTimeframe);
+  const generateChartData = (results: any[], currentPrices: (number | null)[], displayHoldings: AssetHolding[]) => {
+    // Find the result with the most historical data to use as time base
+    const baseData = results.find(r => r.data.length > 0)?.data || [];
+    
+    if (baseData.length === 0) {
+      // Generate synthetic data if no historical data available
+      return generateSyntheticData(displayHoldings, currentPrices);
+    }
+
+    // Use historical data as base and create portfolio values
+    return baseData.map((dataPoint: any, index: number) => {
+      const chartPoint: any = {
+        date: dataPoint.date,
+        timestamp: dataPoint.timestamp,
+        formattedDate: dataPoint.formattedDate
+      };
+
+      displayHoldings.forEach((holding, holdingIndex) => {
+        const result = results[holdingIndex];
+        const currentPrice = currentPrices[holdingIndex] || holding.currentPrice;
+        
+        let price: number;
+        if (result.data.length > index && result.data[index]) {
+          price = result.data[index].price;
+        } else {
+          // Interpolate missing data
+          price = currentPrice;
+        }
+        
+        chartPoint[holding.symbol || holding.name] = Math.round(holding.quantity * price);
+      });
+
+      return chartPoint;
+    });
+  };
+
+  const generateSyntheticData = (displayHoldings: AssetHolding[], currentPrices: (number | null)[]) => {
+    const days = priceService['getTimeframeDays'](selectedTimeframe);
     const data = [];
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
@@ -278,12 +376,9 @@ export const AssetTrendChart: React.FC<AssetTrendChartProps> = ({
         const currentPrice = currentPrices[index] || holding.currentPrice;
         const baseValue = holding.quantity * currentPrice;
         
-        // Generate realistic historical data based on current price
-        const volatility = holding.type === 'crypto' ? 0.05 : 
-                          holding.type === 'stock' ? 0.02 : 0.01;
-        
+        const volatility = holding.type === 'crypto' ? 0.05 : 0.02;
         const daysFromEnd = days - i;
-        const trend = Math.sin(daysFromEnd / 20) * 0.1 + Math.cos(daysFromEnd / 45) * 0.05;
+        const trend = Math.sin(daysFromEnd / 20) * 0.1;
         const randomWalk = (Math.random() - 0.5) * volatility;
         
         const historicalMultiplier = 1 + trend + randomWalk;
@@ -299,7 +394,7 @@ export const AssetTrendChart: React.FC<AssetTrendChartProps> = ({
   };
 
   const generateFallbackData = () => {
-    const days = getTimeframeDays(selectedTimeframe);
+    const days = priceService['getTimeframeDays'](selectedTimeframe);
     const data = [];
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
@@ -331,18 +426,6 @@ export const AssetTrendChart: React.FC<AssetTrendChartProps> = ({
     }
 
     return data;
-  };
-
-  const getTimeframeDays = (timeframe: string): number => {
-    switch (timeframe) {
-      case '1D': return 1;
-      case '1W': return 7;
-      case '1M': return 30;
-      case '3M': return 90;
-      case '6M': return 180;
-      case '1Y': return 365;
-      default: return 30;
-    }
   };
 
   const handleRefresh = async () => {
@@ -400,22 +483,30 @@ export const AssetTrendChart: React.FC<AssetTrendChartProps> = ({
             const holding = displayHoldings.find(h => (h.symbol || h.name) === entry.name);
             const livePrice = livePrices.get(entry.name);
             const currentValue = livePrice ? holding?.quantity * livePrice : entry.value;
+            const market = marketData.get(entry.name);
             
             return (
-              <div key={index} className="flex items-center justify-between space-x-4 mb-1">
-                <div className="flex items-center space-x-2">
-                  <div 
-                    className="w-2 h-2 rounded-full" 
-                    style={{ backgroundColor: entry.color }}
-                  />
-                  <span className="text-sm text-slate-600">{entry.name}</span>
-                  {livePrice && (
-                    <span className="text-xs bg-green-100 text-green-700 px-1 rounded">LIVE</span>
-                  )}
+              <div key={index} className="mb-2">
+                <div className="flex items-center justify-between space-x-4 mb-1">
+                  <div className="flex items-center space-x-2">
+                    <div 
+                      className="w-2 h-2 rounded-full" 
+                      style={{ backgroundColor: entry.color }}
+                    />
+                    <span className="text-sm text-slate-600">{entry.name}</span>
+                    {livePrice && (
+                      <span className="text-xs bg-green-100 text-green-700 px-1 rounded">LIVE</span>
+                    )}
+                  </div>
+                  <span className="text-sm font-semibold text-slate-900">
+                    ${(currentValue || entry.value).toLocaleString()}
+                  </span>
                 </div>
-                <span className="text-sm font-semibold text-slate-900">
-                  ${(currentValue || entry.value).toLocaleString()}
-                </span>
+                {market && (
+                  <div className="text-xs text-slate-500 ml-4">
+                    Open: ${market.open} | High: ${market.dayHigh} | Low: ${market.dayLow}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -440,7 +531,7 @@ export const AssetTrendChart: React.FC<AssetTrendChartProps> = ({
           </div>
           <div>
             <h3 className="text-lg font-semibold text-slate-900">Real-Time Asset Performance</h3>
-            <p className="text-sm text-slate-600">Live market data and price trends</p>
+            <p className="text-sm text-slate-600">Live data via Custom yfinance API</p>
           </div>
         </div>
         
@@ -450,7 +541,7 @@ export const AssetTrendChart: React.FC<AssetTrendChartProps> = ({
             {connectionStatus === 'connected' ? (
               <div className="flex items-center space-x-2 text-green-600">
                 <Wifi className="w-4 h-4" />
-                <span className="text-sm font-medium">Live Data</span>
+                <span className="text-sm font-medium">Live</span>
               </div>
             ) : connectionStatus === 'loading' ? (
               <div className="flex items-center space-x-2 text-blue-600">
@@ -493,24 +584,31 @@ export const AssetTrendChart: React.FC<AssetTrendChartProps> = ({
         </div>
       </div>
 
+
       {/* Live Price Summary */}
       {livePrices.size > 0 && (
         <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg">
-          <h4 className="text-sm font-semibold text-slate-700 mb-3">Live Prices</h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {displayHoldings.map((holding) => {
               const livePrice = livePrices.get(holding.symbol || holding.name);
-              const change = livePrice ? ((livePrice - holding.currentPrice) / holding.currentPrice) * 100 : 0;
+              const market = marketData.get(holding.symbol || holding.name);
+              const change = livePrice && market ? ((livePrice - market.previousClose) / market.previousClose) * 100 : 0;
               
               return (
                 <div key={holding.id} className="text-center">
                   <div className="text-sm font-medium text-slate-700">{holding.symbol || holding.name}</div>
                   <div className="text-lg font-bold text-slate-900">
                     ${(livePrice || holding.currentPrice).toLocaleString()}
+                    {market && <span className="text-xs text-slate-500 ml-1">{market.currency}</span>}
                   </div>
                   <div className={`text-sm ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {change >= 0 ? '+' : ''}{change.toFixed(2)}%
                   </div>
+                  {market && (
+                    <div className="text-xs text-slate-500">
+                      H: ${market.dayHigh} L: ${market.dayLow}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -555,14 +653,14 @@ export const AssetTrendChart: React.FC<AssetTrendChartProps> = ({
           <div className="flex items-center justify-center h-full">
             <div className="flex items-center space-x-3">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="text-slate-600">Loading real-time data...</span>
+              <span className="text-slate-600">Loading from custom API...</span>
             </div>
           </div>
         ) : connectionStatus === 'error' && chartData.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full">
             <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
             <h3 className="text-lg font-medium text-slate-900 mb-2">Unable to Load Live Data</h3>
-            <p className="text-slate-600 text-center mb-4">Check your internet connection</p>
+            <p className="text-slate-600 text-center mb-4">Check your custom API connection</p>
             <button
               onClick={handleRefresh}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -635,10 +733,7 @@ export const AssetTrendChart: React.FC<AssetTrendChartProps> = ({
           </span>
         </div>
         
-        <div className="flex items-center space-x-2 text-xs text-slate-500">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span>Auto-refresh every 30s</span>
-        </div>
+        
       </div>
     </motion.div>
   );
