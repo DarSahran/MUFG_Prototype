@@ -23,11 +23,23 @@ interface Message {
 
 interface SerperChatInterfaceProps {
   userProfile: UserProfile;
+  liveMarketData?: any;
+  portfolioContext?: {
+    totalValue: number;
+    holdings: any[];
+    riskProfile: string;
+  };
 }
 
-export const SerperChatInterface: React.FC<SerperChatInterfaceProps> = ({ userProfile }) => {
+// Make sure this component is properly exported
+export const SerperChatInterface: React.FC<SerperChatInterfaceProps> = ({ 
+  userProfile, 
+  liveMarketData,
+  portfolioContext 
+}) => {
   const { askSerperAI, loading, error, setError, planDetails, fetchPlanDetails, canMakeQuery, getUsageMessage, getTimeUntilReset } = useSerperChat();
   const { getTotalPortfolioValue } = usePortfolio();
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -36,8 +48,9 @@ export const SerperChatInterface: React.FC<SerperChatInterfaceProps> = ({ userPr
       timestamp: new Date(),
     }
   ]);
+
   const [inputText, setInputText] = useState('');
-  const [lastRequestTime, setLastRequestTime] = useState<number>(0);
+  const [lastRequestTime, setLastRequestTime] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -82,14 +95,20 @@ export const SerperChatInterface: React.FC<SerperChatInterfaceProps> = ({ userPr
 
     try {
       const portfolioValue = getTotalPortfolioValue();
+      
+      // Enhanced context with live market data
+      const enhancedContext = {
+        portfolioValue,
+        riskProfile: userProfile.riskTolerance,
+        age: userProfile.age,
+        retirementAge: userProfile.retirementAge,
+        ...(liveMarketData && { liveMarketData }),
+        ...(portfolioContext && { portfolioContext })
+      };
+
       const response = await askSerperAI({
         query: text,
-        context: {
-          portfolioValue,
-          riskProfile: userProfile.riskTolerance,
-          age: userProfile.age,
-          retirementAge: userProfile.retirementAge
-        }
+        context: enhancedContext
       });
 
       if (response) {
@@ -100,7 +119,6 @@ export const SerperChatInterface: React.FC<SerperChatInterfaceProps> = ({ userPr
           timestamp: new Date(),
           response
         };
-
         setMessages(prev => [...prev, aiMessage]);
       }
     } catch (err) {
@@ -142,33 +160,24 @@ export const SerperChatInterface: React.FC<SerperChatInterfaceProps> = ({ userPr
   ];
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl shadow-lg">
+    <div className="flex flex-col h-full bg-white rounded-lg shadow-sm border border-slate-200">
       {/* Header with Plan Details */}
-      <div className="p-4 sm:p-6 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-green-50">
+      <div className="flex-shrink-0 p-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-green-50">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-gradient-to-br from-blue-600 to-green-600 rounded-lg">
-              <Bot className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg sm:text-xl font-bold text-slate-900">Serper AI Financial Advisor</h2>
-              <p className="text-sm text-slate-600">Powered by real-time web search & market data</p>
-            </div>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Serper AI Financial Advisor</h2>
+            <p className="text-sm text-slate-600">Powered by real-time web search & market data</p>
           </div>
           
           {planDetails && (
-            <div className="text-right">
-              <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  planDetails.dailyRemaining > 1 ? 'bg-green-500' : 
-                  planDetails.dailyRemaining > 0 ? 'bg-yellow-500' : 'bg-red-500'
-                }`} />
-                <span className="text-sm font-medium text-slate-700">
-                  {planDetails.dailyRemaining}/{planDetails.dailyLimit} daily queries
-                </span>
-              </div>
-              <div className="text-xs text-slate-500">
-                {planDetails.planName} Plan • {getTimeUntilReset()}
+            <div className="flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full ${
+                planDetails.dailyRemaining > 1 ? 'bg-green-500' :
+                planDetails.dailyRemaining > 0 ? 'bg-yellow-500' : 'bg-red-500'
+              }`} />
+              <div className="text-sm">
+                <div className="font-medium">{planDetails.dailyRemaining}/{planDetails.dailyLimit} daily queries</div>
+                <div className="text-xs text-slate-500">{planDetails.planName} Plan • {getTimeUntilReset()}</div>
               </div>
             </div>
           )}
@@ -176,14 +185,14 @@ export const SerperChatInterface: React.FC<SerperChatInterfaceProps> = ({ userPr
 
         {/* Usage Progress Bar */}
         {planDetails && (
-          <div className="mt-4">
+          <div className="mt-3">
             <div className="flex justify-between text-xs text-slate-600 mb-1">
               <span>Daily Usage</span>
               <span>{planDetails.dailyUsed}/{planDetails.dailyLimit}</span>
             </div>
             <div className="w-full bg-slate-200 rounded-full h-2">
-              <div 
-                className={`h-2 rounded-full transition-all duration-500 ${
+              <div
+                className={`h-2 rounded-full transition-all duration-300 ${
                   planDetails.dailyUsed / planDetails.dailyLimit > 0.8 ? 'bg-red-500' :
                   planDetails.dailyUsed / planDetails.dailyLimit > 0.6 ? 'bg-orange-500' :
                   'bg-green-500'
@@ -196,38 +205,38 @@ export const SerperChatInterface: React.FC<SerperChatInterfaceProps> = ({ userPr
 
         {/* Usage Warnings */}
         {planDetails && planDetails.dailyRemaining <= 1 && planDetails.dailyRemaining > 0 && (
-          <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="w-4 h-4 text-orange-600" />
-              <span className="text-sm text-orange-800">
-                Only {planDetails.dailyRemaining} query remaining today. {getTimeUntilReset()}.
-              </span>
-            </div>
+          <div className="mt-2 p-2 bg-yellow-100 border border-yellow-200 rounded text-sm text-yellow-800">
+            Only {planDetails.dailyRemaining} query remaining today. {getTimeUntilReset()}.
           </div>
         )}
 
         {planDetails && planDetails.dailyRemaining === 0 && (
-          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <AlertCircle className="w-4 h-4 text-red-600" />
-                <span className="text-sm text-red-800">
-                  Daily query limit reached. {getTimeUntilReset()}.
-                </span>
-              </div>
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                Upgrade Plan
-              </button>
-            </div>
+          <div className="mt-2 p-2 bg-red-100 border border-red-200 rounded text-sm text-red-800 flex justify-between items-center">
+            <span>Daily query limit reached. {getTimeUntilReset()}.</span>
+            <button className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">
+              Upgrade Plan
+            </button>
           </div>
         )}
       </div>
 
+      {/* Live Market Data Banner */}
+      {liveMarketData && (
+        <div className="flex-shrink-0 p-3 bg-green-50 border-b border-green-200">
+          <div className="flex items-center space-x-2">
+            <Zap className="w-4 h-4 text-green-600" />
+            <span className="text-sm text-green-800">
+              Live Market: VAS.AX ${liveMarketData.regularMarketPrice} ({liveMarketData.currency})
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Quick Actions */}
       {messages.length <= 1 && (
-        <div className="p-4 sm:p-6 border-b border-slate-200">
+        <div className="flex-shrink-0 p-4 border-b border-slate-200">
           <h3 className="text-sm font-medium text-slate-700 mb-3">Quick Financial Questions</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {quickActions.map((action, index) => {
               const Icon = action.icon;
               return (
@@ -237,10 +246,8 @@ export const SerperChatInterface: React.FC<SerperChatInterfaceProps> = ({ userPr
                   disabled={loading || !canMakeQuery()}
                   className="flex items-center space-x-3 p-3 text-left border border-slate-200 rounded-lg hover:shadow-md hover:border-blue-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Icon className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <span className="text-sm font-medium text-slate-900">{action.text}</span>
+                  <Icon className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm">{action.text}</span>
                 </button>
               );
             })}
@@ -249,144 +256,108 @@ export const SerperChatInterface: React.FC<SerperChatInterfaceProps> = ({ userPr
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-        <AnimatePresence>
-          {messages.map((message) => (
-            <motion.div
-              key={message.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`flex max-w-4xl ${message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <div className={`flex-shrink-0 ${message.sender === 'user' ? 'ml-3' : 'mr-3'}`}>
-                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${
-                    message.sender === 'user' 
-                      ? 'bg-blue-600' 
-                      : 'bg-gradient-to-br from-green-500 to-blue-600'
-                  }`}>
-                    {message.sender === 'user' ? (
-                      <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                    ) : (
-                      <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                    )}
-                  </div>
-                </div>
-                
-                <div className="min-w-0 flex-1">
-                  <div className={`p-3 sm:p-4 rounded-lg ${
-                    message.sender === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 text-slate-900'
-                  }`}>
-                    <p className="whitespace-pre-line text-sm sm:text-base">{message.text}</p>
-                  </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div className={`flex space-x-2 max-w-3xl ${message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                message.sender === 'user' ? 'bg-blue-600' : 'bg-green-600'
+              }`}>
+                {message.sender === 'user' ? (
+                  <User className="w-4 h-4 text-white" />
+                ) : (
+                  <Bot className="w-4 h-4 text-white" />
+                )}
+              </div>
+              
+              <div className={`rounded-lg p-3 ${
+                message.sender === 'user'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-100 text-slate-900'
+              }`}>
+                <p className="text-sm whitespace-pre-wrap">{message.text}</p>
 
-                  {/* Enhanced AI Response Display */}
-                  {message.response && message.sender === 'ai' && (
-                    <div className="mt-3 space-y-3">
-                      {/* Search Results Summary */}
-                      {message.response.searchResults.length > 0 && (
-                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <Globe className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm font-semibold text-blue-900">
-                              Web Search Results ({message.response.searchResults.length})
-                            </span>
-                            {message.response.cached && (
-                              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
-                                Cached
-                              </span>
-                            )}
-                          </div>
-                          <div className="space-y-2">
-                            {message.response.searchResults.slice(0, 3).map((result: any, index: number) => (
-                              <div key={index} className="text-sm">
-                                <a 
-                                  href={result.link} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-blue-700 hover:text-blue-800 font-medium"
-                                >
-                                  {result.title}
-                                </a>
-                                <p className="text-blue-600 text-xs mt-1">{result.snippet}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Sources */}
-                      {message.response.sources.length > 0 && (
-                        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <Target className="w-4 h-4 text-green-600" />
-                            <span className="text-sm font-semibold text-green-900">Sources</span>
-                          </div>
-                          <div className="space-y-1">
-                            {message.response.sources.slice(0, 3).map((source: string, index: number) => (
-                              <div key={index} className="text-xs text-green-700">
-                                • {source.split(' - ')[0]}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Response Metadata */}
-                      <div className="flex items-center justify-between text-xs text-slate-500">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center space-x-1">
-                            <Star className="w-3 h-3" />
-                            <span>Confidence: {message.response.confidence}%</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <Zap className="w-3 h-3" />
-                            <span>Tokens: {message.response.tokensUsed}</span>
-                          </div>
+                {/* Enhanced AI Response Display */}
+                {message.response && message.sender === 'ai' && (
+                  <div className="mt-3 space-y-3">
+                    {/* Search Results Summary */}
+                    {message.response.searchResults.length > 0 && (
+                      <div className="border-t border-slate-200 pt-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-xs font-medium text-slate-600">
+                            Web Search Results ({message.response.searchResults.length})
+                          </h4>
                           {message.response.cached && (
-                            <div className="flex items-center space-x-1">
-                              <Clock className="w-3 h-3 text-green-500" />
-                              <span className="text-green-600">Cached Result</span>
-                            </div>
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                              Cached
+                            </span>
                           )}
                         </div>
-                        <button className="text-blue-600 hover:text-blue-700">
-                          View all sources
-                        </button>
+                        
+                        <div className="space-y-2">
+                          {message.response.searchResults.slice(0, 3).map((result: any, index: number) => (
+                            <div key={index} className="p-2 bg-white rounded border border-slate-200">
+                              <h5 className="text-xs font-medium text-slate-800 line-clamp-1">{result.title}</h5>
+                              <p className="text-xs text-slate-600 mt-1 line-clamp-2">{result.snippet}</p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+                    )}
 
+                    {/* Sources */}
+                    {message.response.sources.length > 0 && (
+                      <div className="border-t border-slate-200 pt-2">
+                        <h4 className="text-xs font-medium text-slate-600 mb-1">Sources</h4>
+                        <div className="space-y-1">
+                          {message.response.sources.slice(0, 3).map((source: string, index: number) => (
+                            <div key={index} className="text-xs text-slate-500">
+                              • {source.split(' - ')[0]}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Response Metadata */}
+                    <div className="flex items-center justify-between text-xs text-slate-500 border-t border-slate-200 pt-2">
+                      <div className="flex items-center space-x-3">
+                        <span>Confidence: {message.response.confidence}%</span>
+                        <span>Tokens: {message.response.tokensUsed}</span>
+                        {message.response.cached && (
+                          <span className="text-blue-600">Cached Result</span>
+                        )}
+                      </div>
+                      <button className="text-blue-600 hover:text-blue-700">
+                        View all sources
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-slate-200 p-4 sm:p-6">
+      <div className="flex-shrink-0 p-4 border-t border-slate-200">
         {/* Error Display */}
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="w-4 h-4 text-red-600" />
-              <span className="text-sm text-red-800">{error}</span>
-            </div>
+          <div className="mb-3 p-3 bg-red-100 border border-red-200 rounded-lg flex items-center space-x-2">
+            <AlertCircle className="w-4 h-4 text-red-600" />
+            <span className="text-sm text-red-800">{error}</span>
           </div>
         )}
 
         {/* Smart Suggestions */}
         {inputText.length === 0 && messages.length <= 1 && (
-          <div className="mb-4">
-            <div className="flex items-center space-x-2 mb-2">
-              <Zap className="w-4 h-4 text-blue-500" />
-              <span className="text-xs font-medium text-slate-700">Popular Financial Questions</span>
-            </div>
+          <div className="mb-3">
+            <h4 className="text-xs font-medium text-slate-600 mb-2">Popular Financial Questions</h4>
             <div className="flex flex-wrap gap-2">
               {financialSuggestions.slice(0, 4).map((suggestion, index) => (
                 <button
@@ -403,45 +374,45 @@ export const SerperChatInterface: React.FC<SerperChatInterfaceProps> = ({ userPr
         )}
 
         {/* Input */}
-        <div className="flex space-x-3">
-          <input
-            type="text"
+        <div className="flex space-x-2">
+          <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage(inputText)}
             placeholder={
-              !canMakeQuery() 
+              !canMakeQuery()
                 ? `Upgrade your plan or wait for reset to ask more questions...`
                 : "Ask me about investments, market trends, or financial planning..."
             }
             disabled={loading || !canMakeQuery()}
-            className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 disabled:cursor-not-allowed text-sm sm:text-base"
+            className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 disabled:cursor-not-allowed text-sm resize-none"
+            rows={1}
           />
+          
           <button
             onClick={() => handleSendMessage(inputText)}
             disabled={!inputText.trim() || loading || !canMakeQuery()}
             className="px-4 sm:px-6 py-3 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg hover:from-blue-700 hover:to-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
-              <RefreshCw className="w-5 h-5 animate-spin" />
+              <RefreshCw className="w-4 h-4 animate-spin" />
             ) : (
-              <Send className="w-5 h-5" />
+              <Send className="w-4 h-4" />
             )}
           </button>
         </div>
 
         {/* Plan Info Footer */}
-        <div className="flex items-center justify-between mt-3 text-xs text-slate-500">
-          <span>
-            AI responses powered by Serper web search • Educational purposes only
-          </span>
+        <div className="mt-2 text-xs text-slate-500 flex justify-between">
+          <span>AI responses powered by Serper web search • Educational purposes only</span>
           {planDetails && (
-            <span>
-              Monthly: {planDetails.monthlyUsed}/{planDetails.monthlyLimit} used
-            </span>
+            <span>Monthly: {planDetails.monthlyUsed}/{planDetails.monthlyLimit} used</span>
           )}
         </div>
       </div>
     </div>
   );
 };
+
+// Default export as well for flexibility
+export default SerperChatInterface;
