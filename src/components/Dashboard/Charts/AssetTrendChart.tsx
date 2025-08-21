@@ -68,7 +68,7 @@ class CustomPriceService {
         return cached.price;
       }
 
-      console.log(`Fetching live price for ${symbol} from custom API`);
+      // console.log(`Fetching live price for ${symbol} from custom API`);
       
       const response = await fetch(
         `${this.baseURL}/api/quote?symbol=${encodeURIComponent(symbol)}`
@@ -81,7 +81,7 @@ class CustomPriceService {
       const data: CustomAPIResponse = await response.json();
       
       if (data && data.regularMarketPrice) {
-        console.log(`✅ Custom API price for ${symbol}: $${data.regularMarketPrice} ${data.currency}`);
+        // console.log(`✅ Custom API price for ${symbol}: $${data.regularMarketPrice} ${data.currency}`);
         
         this.priceCache.set(symbol, { 
           price: data.regularMarketPrice, 
@@ -93,7 +93,7 @@ class CustomPriceService {
         return data.regularMarketPrice;
       }
 
-      console.warn(`⚠️ No price data available for ${symbol}`);
+      // console.warn(`⚠️ No price data available for ${symbol}`);
       return null;
     } catch (error) {
       console.error(`❌ Error fetching price for ${symbol}:`, error);
@@ -103,7 +103,7 @@ class CustomPriceService {
 
   async fetchHistoricalData(symbol: string, timeframe: string): Promise<any[]> {
     try {
-      console.log(`Fetching historical data for ${symbol} (${timeframe}) from custom API`);
+      // console.log(`Fetching historical data for ${symbol} (${timeframe}) from custom API`);
       
       // For now, use current price to generate historical trend
       // You can extend your backend to provide historical data
@@ -115,7 +115,7 @@ class CustomPriceService {
 
       return this.generateHistoricalFromCurrentPrice(symbol, currentPrice, timeframe);
     } catch (error) {
-      console.error(`Error fetching historical data for ${symbol}:`, error);
+      // console.error(`Error fetching historical data for ${symbol}:`, error);
       return [];
     }
   }
@@ -258,7 +258,7 @@ export const AssetTrendChart: React.FC<AssetTrendChartProps> = ({
         return;
       }
 
-      console.log('🚀 Fetching data for holdings:', displayHoldings.map(h => h.symbol || h.name));
+      // console.log('🚀 Fetching data for holdings:', displayHoldings.map(h => h.symbol || h.name));
 
       // Fetch historical data for each holding
       const historicalDataPromises = displayHoldings.map(async (holding) => {
@@ -280,7 +280,7 @@ export const AssetTrendChart: React.FC<AssetTrendChartProps> = ({
       );
       const currentPrices = await Promise.all(pricePromises);
       
-      console.log('💰 Current prices:', currentPrices);
+      // console.log('💰 Current prices:', currentPrices);
       
       // Generate chart data
       const chartData = generateChartData(results, currentPrices, displayHoldings);
