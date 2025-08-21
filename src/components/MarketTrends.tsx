@@ -1,15 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
-  TrendingUp, TrendingDown, Activity, BarChart3, LineChart, PieChart, 
-  RefreshCw, Download, Filter, Globe, AlertCircle, Star, Bell, Target, 
-  Plus, Settings, Search, Building, Coins, DollarSign, CreditCard,
-  Eye, Edit, Trash2, ArrowUpDown, Calendar, Info, X, ExternalLink,
-  Clock, Zap, Crown, Loader, Wifi, WifiOff, CheckCircle, XCircle
+  TrendingUp, TrendingDown, BarChart3, 
+  RefreshCw, AlertCircle, Star, 
+  Plus, Search, Building, Coins,
+  Eye, X,
+  Zap, Crown, Loader, Wifi, WifiOff, CheckCircle
 } from 'lucide-react';
-import { 
-  LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar
-} from 'recharts';
+
 
 // Enhanced Real-time Data Service
 class RealTimeDataService {
@@ -450,6 +447,39 @@ interface MarketTrendsProps {
   };
 }
 
+// Fetch price and details from Vercel endpoint
+const fetchPriceFromVercel = async (symbol: string): Promise<Partial<AssetData> | null> => {
+  try {
+    const url = `https://mufg-hackathon-backend-q8zxhtuu6-darsahrans-projects.vercel.app/api/quote?symbol=${encodeURIComponent(symbol)}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.warn(`Failed to fetch data for ${symbol}: ${res.status}`);
+      return null;
+    }
+    const data = await res.json();
+    console.log(`Fetched data for ${symbol}:`, data);
+    
+    // Map the API response to our AssetData format
+    const price = data.regularMarketPrice || data.price || 0;
+    const previousClose = data.regularMarketPreviousClose || data.previousClose || price;
+    const change = price - previousClose;
+    const changePercent = previousClose > 0 ? ((change / previousClose) * 100) : 0;
+    
+    return {
+      price: price,
+      change: change,
+      changePercent: changePercent,
+      volume: data.regularMarketVolume || data.volume || 0,
+      marketCap: data.marketCap || (price * (data.sharesOutstanding || 0)),
+      currency: data.currency || 'AUD',
+      lastUpdated: data.lastUpdated || new Date().toISOString(),
+    };
+  } catch (e) {
+    console.error(`Error fetching data for ${symbol}:`, e);
+    return null;
+  }
+};
+
 // TradingView Modal Component
 const TradingViewModal: React.FC<{
   symbol: string;
@@ -642,7 +672,6 @@ const AddAssetModal: React.FC<{
   const [inputSymbol, setInputSymbol] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const dataService = RealTimeDataService.getInstance();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -653,8 +682,21 @@ const AddAssetModal: React.FC<{
     setError('');
 
     try {
-      const assetData = await dataService.fetchSingleAssetData(symbol);
-      if (assetData) {
+      const priceData = await fetchPriceFromVercel(symbol);
+      if (priceData && priceData.price !== undefined && priceData.price > 0) {
+        const assetData: AssetData = {
+          symbol,
+          name: symbol.replace('.AX', '').replace('-USD', ''),
+          price: priceData.price,
+          change: priceData.change || 0,
+          changePercent: priceData.changePercent || 0,
+          volume: priceData.volume || 0,
+          marketCap: priceData.marketCap,
+          currency: priceData.currency || 'AUD',
+          category: 'Other',
+          type: symbol.endsWith('.AX') ? 'stocks' : symbol.endsWith('-USD') ? 'crypto' : 'stocks',
+          lastUpdated: priceData.lastUpdated || new Date().toISOString()
+        };
         onAddAsset(assetData);
         setInputSymbol('');
         onClose();
@@ -962,28 +1004,29 @@ const MarketTrends: React.FC<MarketTrendsProps> = ({ userProfile }) => {
 
   const loadMarketData = async (silentRefresh = false) => {
     if (!silentRefresh) setLoading(true);
-    
     try {
       setConnectionStatus('connected');
       const assets = assetCategories[selectedAssetType].assets;
-      const symbols = assets.map(asset => asset.symbol);
-      
-      let realTimeData: any[] = [];
-      
-      if (selectedAssetType === 'crypto') {
-        realTimeData = await dataService.fetchCryptoData(symbols);
-      } else {
-        realTimeData = await dataService.fetchASXData(symbols);
-      }
-      
-      const mappedData: AssetData[] = realTimeData.map((data, index) => ({
-        ...data,
-        category: assets[index].category,
-        type: selectedAssetType,
-        exchange: assets[index].exchange
-      }));
-
-      setMarketData(mappedData);
+      const updatedAssets: AssetData[] = await Promise.all(
+        assets.map(async (asset) => {
+          const priceData = await fetchPriceFromVercel(asset.symbol);
+          const finalAsset = {
+            ...asset,
+            price: priceData?.price ?? 0,
+            change: priceData?.change ?? 0,
+            changePercent: priceData?.changePercent ?? 0,
+            volume: priceData?.volume ?? 0,
+            marketCap: priceData?.marketCap,
+            currency: priceData?.currency ?? 'AUD',
+            lastUpdated: priceData?.lastUpdated ?? new Date().toISOString(),
+            type: selectedAssetType,
+          };
+          console.log(`Final asset data for ${asset.symbol}:`, finalAsset);
+          return finalAsset;
+        })
+      );
+      console.log('Setting market data:', updatedAssets);
+      setMarketData(updatedAssets);
       lastRefreshTime.current = new Date();
     } catch (error) {
       console.error('Error loading market data:', error);
